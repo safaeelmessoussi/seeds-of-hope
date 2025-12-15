@@ -4,11 +4,49 @@
 @theme {
   --color-primary-orange: #F39200;
   --color-primary-green: #8DC63F;
-  --font-cairo: "Cairo", sans-serif;
+  --font-sans: 'Cairo', sans-serif;
 }
 
+/* Custom Calendar Header Fixes */
+.rbc-time-header-content {
+  border-left: 1px solid #ddd;
+}
+
+/* Ensure the header cell can grow to fit custom 2-line content */
+.rbc-time-header-cell {
+  min-height: auto !important;
+  height: auto !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Align content to bottom if needed */
+}
+
+.rbc-header {
+  height: auto !important;
+  padding-bottom: 5px;
+  overflow: visible !important;
+  white-space: normal !important;
+  /* Allow wrapping if we want, or keep it */
+}
+
+/* Fix "All Day" row from collapsing or overlapping */
+.rbc-allday-cell {
+  height: auto !important;
+  min-height: 25px;
+  border-bottom: 1px solid #ddd;
+  /* Visual separation */
+}
+
+/* General Layout Fixes */
+.rbc-time-header.rbc-overflowing-header {
+  margin-left: 0 !important;
+  /* Fix potential scrollbar misalignment */
+}
+
+
 body {
-  font-family: var(--font-cairo);
+  font-family: var(--font-sans);
   direction: rtl;
   background-color: #f9fa_fb;
 }

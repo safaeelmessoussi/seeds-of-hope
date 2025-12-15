@@ -10,13 +10,13 @@ export default function Login() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        // In a real scenario, use Firebase Auth here
-        // import { signInWithEmailAndPassword } from "firebase/auth";
-        // await signInWithEmailAndPassword(auth, email, password);
 
         // Mock Login for demonstration
         if (email === 'admin@seeds.com' && password === 'admin') {
-            navigate('/admin/dashboard');
+            localStorage.setItem('isAdmin', 'true');
+            // Dispatch a custom event to update Navbar immediately
+            window.dispatchEvent(new Event('storage'));
+            navigate('/admin');
         } else {
             setError('بيانات الدخول غير صحيحة (جرب: admin@seeds.com / admin)');
         }

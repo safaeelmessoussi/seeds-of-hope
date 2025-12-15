@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { Layers, FileText, Calendar, LogOut, Trash2, Users, Layout as LayoutIcon } from 'lucide-react';
 
 export default function AdminDashboard() {
     return (
@@ -9,42 +10,66 @@ export default function AdminDashboard() {
                 مرحباً بك في لوحة تحكم الإدارة. يمكنك هنا إدارة المحتوى والجدول الزمني.
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Link to="/admin/levels" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-blue-100 p-4 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors">
+                        <Layers size={32} />
                     </div>
-                    <h2 className="text-xl font-bold mb-2">إدارة المستويات</h2>
-                    <p className="text-gray-500 mb-4 h-12">إضافة وتعديل وحذف المستويات الدراسية.</p>
-                    <Link to="/admin/levels" className="text-primary-green font-bold hover:underline flex items-center gap-1">
-                        الذهاب للقسم
-                        <span dir="ltr">&larr;</span>
-                    </Link>
-                </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">إدارة المستويات</h2>
+                        <p className="text-sm text-gray-500 mt-1">تعديل المستويات الدراسية</p>
+                    </div>
+                </Link>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <Link to="/admin/content" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-purple-100 p-4 rounded-full text-purple-600 group-hover:bg-purple-200 transition-colors">
+                        <FileText size={32} />
                     </div>
-                    <h2 className="text-xl font-bold mb-2">إدارة المحتوى</h2>
-                    <p className="text-gray-500 mb-4 h-12">رفع الملفات والفيديوهات وتعيينها للمستويات.</p>
-                    <button className="text-primary-green font-bold hover:underline flex items-center gap-1">
-                        الذهاب للقسم
-                        <span dir="ltr">&larr;</span>
-                    </button>
-                </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">إدارة المحتوى</h2>
+                        <p className="text-sm text-gray-500 mt-1">رفع الملفات والفيديوهات</p>
+                    </div>
+                </Link>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 bg-green-100 text-primary-green rounded-lg flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <Link to="/admin/calendar" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-green-100 p-4 rounded-full text-primary-green group-hover:bg-green-200 transition-colors">
+                        <Calendar size={32} />
                     </div>
-                    <h2 className="text-xl font-bold mb-2">إدارة الجدول</h2>
-                    <p className="text-gray-500 mb-4 h-12">تحديث مواعيد الحصص وإضافة العطل.</p>
-                    <button className="text-primary-green font-bold hover:underline flex items-center gap-1">
-                        الذهاب للقسم
-                        <span dir="ltr">&larr;</span>
-                    </button>
-                </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">إدارة الجدول</h2>
+                        <p className="text-sm text-gray-500 mt-1">تحديث الحصص والعطل</p>
+                    </div>
+                </Link>
+
+                <Link to="/admin/teachers" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-blue-100 p-4 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors">
+                        <Users size={32} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">إدارة المعلمات</h2>
+                        <p className="text-sm text-gray-500 mt-1">تعديل بيانات المعلمات</p>
+                    </div>
+                </Link>
+
+                <Link to="/admin/rooms" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-yellow-100 p-4 rounded-full text-yellow-600 group-hover:bg-yellow-200 transition-colors">
+                        <LayoutIcon size={32} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">إدارة القاعات</h2>
+                        <p className="text-sm text-gray-500 mt-1">تحديث القاعات والفصول</p>
+                    </div>
+                </Link>
+
+                <Link to="/admin/trash" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col items-center gap-4 group text-center">
+                    <div className="bg-red-50 p-4 rounded-full text-red-500 group-hover:bg-red-100 transition-colors">
+                        <Trash2 size={32} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">سلة المحذوفات</h2>
+                        <p className="text-sm text-gray-500 mt-1">استعادة العناصر المحذوفة</p>
+                    </div>
+                </Link>
             </div>
         </div>
     )

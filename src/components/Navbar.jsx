@@ -1,12 +1,32 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Calendar, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Home, Calendar, User, LogOut, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const checkAdmin = () => {
+            setIsAdmin(localStorage.getItem('isAdmin') === 'true');
+        };
+
+        checkAdmin();
+        window.addEventListener('storage', checkAdmin);
+
+        return () => window.removeEventListener('storage', checkAdmin);
+    }, []);
 
     const closeMenu = () => setIsOpen(false);
+
+    const handleLogout = () => {
+        localStorage.removeItem('isAdmin');
+        setIsAdmin(false);
+        navigate('/');
+        window.dispatchEvent(new Event('storage'));
+    };
 
     const isActive = (path) => location.pathname === path ? "text-primary-orange font-bold" : "text-gray-700 hover:text-primary-green";
 
@@ -29,10 +49,24 @@ export default function Navbar() {
                         <Calendar size={20} />
                         <span>الجدول الزمني</span>
                     </Link>
-                    <Link to="/login" className={`flex items-center gap-2 transition-colors ${isActive('/login')}`}>
-                        <User size={20} />
-                        <span>دخول الإدارة</span>
-                    </Link>
+
+                    {isAdmin ? (
+                        <>
+                            <Link to="/admin" className={`flex items-center gap-2 transition-colors ${isActive('/admin')}`}>
+                                <LayoutDashboard size={20} />
+                                <span>لوحة التحكم</span>
+                            </Link>
+                            <button onClick={handleLogout} className="flex items-center gap-2 text-red-500 hover:text-red-700 transition-colors">
+                                <LogOut size={20} />
+                                <span>خروج</span>
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/login" className={`flex items-center gap-2 transition-colors ${isActive('/login')}`}>
+                            <User size={20} />
+                            <span>دخول الإدارة</span>
+                        </Link>
+                    )}
                 </div>
 
                 {/* Mobile Menu Button */}
@@ -52,10 +86,24 @@ export default function Navbar() {
                         <Calendar size={20} />
                         <span>الجدول الزمني</span>
                     </Link>
-                    <Link to="/login" onClick={closeMenu} className={`flex items-center gap-2 ${isActive('/login')}`}>
-                        <User size={20} />
-                        <span>دخول الإدارة</span>
-                    </Link>
+
+                    {isAdmin ? (
+                        <>
+                            <Link to="/admin" onClick={closeMenu} className={`flex items-center gap-2 ${isActive('/admin')}`}>
+                                <LayoutDashboard size={20} />
+                                <span>لوحة التحكم</span>
+                            </Link>
+                            <button onClick={() => { handleLogout(); closeMenu(); }} className="flex items-center gap-2 text-red-500 hover:text-red-700 w-full text-right">
+                                <LogOut size={20} />
+                                <span>خروج</span>
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/login" onClick={closeMenu} className={`flex items-center gap-2 ${isActive('/login')}`}>
+                            <User size={20} />
+                            <span>دخول الإدارة</span>
+                        </Link>
+                    )}
                 </div>
             )}
         </nav>
