@@ -2,16 +2,74 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-orange: #F39200;
-  --color-primary-green: #8DC63F;
-  --font-sans: 'Cairo', sans-serif;
+  --color-primary-green: #00A651;
+  --color-primary-orange: #FF8F1C;
+  --color-primary-pink: #FF6B6B;
 }
 
-@layer base {
-  body {
-    direction: rtl;
-    font-family: var(--font-sans);
-    background-color: #f9fafb;
-    color: #1f2937;
-  }
+/* Base Styles */
+body {
+  font-family: 'Cairo', sans-serif;
+  background-color: #f8f9fa;
+  direction: rtl;
+  /* Enforce RTL globally */
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ccc;
+}
+
+/* Calendar Overrides */
+.rbc-calendar {
+  direction: ltr;
+  /* Force LTR for calendar internal calculations if needed, but usually RBC handles RTL with culture */
+  font-family: 'Cairo', sans-serif;
+}
+
+/* Fix for RTL in React Big Calendar */
+.rbc-calendar.rbc-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Ensure the calendar container fits well */
+.rbc-calendar {
+  width: 100%;
+}
+
+/* Align headers in RTL */
+.rbc-calendar.rbc-rtl .rbc-header {
+  text-align: center;
+  /* Center day names usually looks best, or right */
+}
+
+/* Fix time gutter placement in RTL */
+.rbc-calendar.rbc-rtl .rbc-time-view .rbc-time-gutter {
+  border-left: 1px solid #ddd;
+  border-right: 0;
+}
+
+/* Fix header borders */
+.rbc-header+.rbc-header {
+  border-left: 1px solid #ddd;
+}
+
+/* In RTL the border logic usually flips, RBC handles some, but sometimes manual overrides help */
+
+
+/* Day names correction might be JS, but let's see if we can tweak styles */

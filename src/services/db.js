@@ -164,5 +164,27 @@ export const dbService = {
             console.error(`Error deleting series ${seriesId}:`, error);
             throw error;
         }
+    },
+
+    // Get Student History (Grades)
+    getStudentHistory: async (studentId) => {
+        try {
+            const q = query(collection(db, 'grades'), where('studentId', '==', studentId));
+            const snapshot = await getDocs(q);
+            const grades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Sort: School Year DESC, Semester ASC
+            return grades.sort((a, b) => {
+                // Parse years like "2025-2026"
+                const yearA = parseInt(a.schoolYear.split('-')[0]);
+                const yearB = parseInt(b.schoolYear.split('-')[0]);
+
+                if (yearA !== yearB) return yearB - yearA; // Newest year first
+                return a.semester - b.semester; // Semester 1 before 2
+            });
+        } catch (error) {
+            console.error(`Error fetching history for student ${studentId}:`, error);
+            throw error;
+        }
     }
 };

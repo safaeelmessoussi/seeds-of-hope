@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toWesternNumerals } from '../../utils/dateUtils';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../firebase';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -37,6 +39,24 @@ export default function Login() {
     const handlePasswordChange = (e) => {
         setPassword(toWesternNumerals(e.target.value));
     }
+
+    const handleResetPassword = async () => {
+        if (!email) {
+            setError('الرجاء إدخال البريد الإلكتروني أولاً لاستعادة كلمة المرور.');
+            return;
+        }
+        try {
+            setLoading(true);
+            await sendPasswordResetEmail(auth, email);
+            alert('تم إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني.');
+            setError('');
+        } catch (error) {
+            console.error(error);
+            setError('فشل إرسال الرابط. تأكد من صحة البريد الإلكتروني.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 relative">
@@ -99,6 +119,15 @@ export default function Login() {
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleResetPassword}
+                                className="text-xs text-primary-orange hover:underline font-medium"
+                            >
+                                نسيت كلمة المرور؟ / تغيير كلمة المرور
                             </button>
                         </div>
                     </div>

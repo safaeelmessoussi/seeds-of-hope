@@ -63,9 +63,9 @@ const CustomToolbar = (toolbar) => {
             <span className="rbc-btn-group">
                 <button type="button" className={toolbar.view === 'month' ? 'rbc-active' : ''} onClick={() => toolbar.onView('month')}>شهري</button>
                 <button type="button" className={toolbar.view === 'week' ? 'rbc-active' : ''} onClick={() => toolbar.onView('week')}>أسبوعي</button>
-                <button type="button" className={toolbar.view === 'day' ? 'rbc-active' : ''} onClick={() => toolbar.onView('day')}>يومي</button>
+                <button type="button" className={toolbar.view === 'agenda' ? 'rbc-active' : ''} onClick={() => toolbar.onView('agenda')}>أجندة</button>
             </span>
-        </div>
+        </div >
     );
 };
 
