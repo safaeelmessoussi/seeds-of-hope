@@ -36,6 +36,7 @@ export default function ManageCalendar() {
         end: '',
         teacherId: '',
         roomId: '',
+        branchId: '', // Add Initial State
         recurrence: 'none', // none, daily, weekly, biweekly, yearly
         recurrenceEnd: '',
     });
@@ -82,6 +83,7 @@ export default function ManageCalendar() {
             end: toLocalISO(endDate),
             teacherId: '',
             roomId: '',
+            branchId: '',
             recurrence: 'none',
             recurrenceEnd: ''
         });
@@ -101,6 +103,7 @@ export default function ManageCalendar() {
             end: toLocalISO(new Date(event.end)),
             teacherId: event.teacherId || '',
             roomId: event.roomId || '',
+            branchId: event.branchId || '',
             recurrence: 'none', // Reset recurrence for edit unless logic allows changing series
             recurrenceEnd: ''
         });
@@ -134,7 +137,8 @@ export default function ManageCalendar() {
             start: new Date(formData.start).toISOString(),
             end: new Date(formData.end).toISOString(),
             teacherId: formData.teacherId,
-            roomId: formData.roomId
+            roomId: formData.roomId,
+            branchId: formData.branchId // Add Branch
         };
 
         try {
@@ -170,7 +174,22 @@ export default function ManageCalendar() {
                     }
                 } else {
                     // Single Update (or clean single event)
-                    await dbService.update('events', selectedEvent.id, eventPayload);
+                    if (formData.recurrence !== 'none' && formData.recurrenceEnd) {
+                        // User is converting a single event (or one instance) into a Series
+                        await dbService.hardDelete('events', selectedEvent.id);
+
+                        const seriesId = crypto.randomUUID();
+                        const events = generateEventSeries(
+                            eventPayload,
+                            formData.recurrence,
+                            new Date(formData.recurrenceEnd),
+                            seriesId
+                        );
+                        await dbService.addBatch('events', events);
+                    } else {
+                        // Regular single update
+                        await dbService.update('events', selectedEvent.id, eventPayload);
+                    }
                 }
             } else {
                 // CREATE LOGIC
@@ -226,7 +245,8 @@ export default function ManageCalendar() {
                     events: [event],
                     start: event.start,
                     end: event.end, // Will update as we find more
-                    type: event.type
+                    type: event.type,
+                    branchId: event.branchId // Added branchId to group
                 });
             }
         } else {
@@ -304,13 +324,25 @@ export default function ManageCalendar() {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-sm text-gray-500">المعلمة (المؤطرة)</label>
+                        <label className="text-sm text-gray-500">الفرع</label>
+                        <select
+                            className="w-full border rounded-lg p-2"
+                            value={formData.branchId || ''}
+                            onChange={e => setFormData({ ...formData, branchId: e.target.value })}
+                        >
+                            <option value="">عام / مشترك</option>
+                            {data.branches?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm text-gray-500">المؤطرة</label>
                         <select
                             className="w-full border rounded-lg p-2"
                             value={formData.teacherId}
                             onChange={e => setFormData({ ...formData, teacherId: e.target.value })}
                         >
-                            <option value="">اختيار معلمة...</option>
+                            <option value="">اختيار مؤطرة...</option>
                             {data.teachers?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                     </div>
@@ -326,6 +358,8 @@ export default function ManageCalendar() {
                             {data.rooms?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                         </select>
                     </div>
+
+                    {/* ... (Activity Type, Time Inputs etc remain the same) ... */}
 
                     <div className="space-y-1">
                         <label className="text-sm text-gray-500">نوع النشاط</label>
@@ -363,36 +397,32 @@ export default function ManageCalendar() {
                     </div>
 
                     {/* Recurrence Options */}
-                    {!selectedEvent && (
-                        <>
-                            <div className="space-y-1">
-                                <label className="text-sm text-gray-500">تكرار</label>
-                                <select
-                                    className="w-full border rounded-lg p-2"
-                                    value={formData.recurrence}
-                                    onChange={e => setFormData({ ...formData, recurrence: e.target.value })}
-                                >
-                                    <option value="none">لا يتكرر</option>
-                                    <option value="daily">يومي</option>
-                                    <option value="weekly">أسبوعي</option>
-                                    <option value="biweekly">نصف شهري (أسبوع نعم وأسبوع لا)</option>
-                                    <option value="yearly">سنوي</option>
-                                </select>
-                            </div>
+                    <div className="space-y-1">
+                        <label className="text-sm text-gray-500">تكرار</label>
+                        <select
+                            className="w-full border rounded-lg p-2"
+                            value={formData.recurrence}
+                            onChange={e => setFormData({ ...formData, recurrence: e.target.value })}
+                        >
+                            <option value="none">لا يتكرر</option>
+                            <option value="daily">يومي</option>
+                            <option value="weekly">أسبوعي</option>
+                            <option value="biweekly">نصف شهري (أسبوع نعم وأسبوع لا)</option>
+                            <option value="yearly">سنوي</option>
+                        </select>
+                    </div>
 
-                            {formData.recurrence !== 'none' && (
-                                <div className="space-y-1">
-                                    <label className="text-sm text-gray-500">تاريخ انتهاء التكرار</label>
-                                    <input
-                                        type="date"
-                                        className="w-full border rounded-lg p-2"
-                                        value={formData.recurrenceEnd}
-                                        onChange={e => setFormData({ ...formData, recurrenceEnd: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            )}
-                        </>
+                    {formData.recurrence !== 'none' && (
+                        <div className="space-y-1">
+                            <label className="text-sm text-gray-500">تاريخ انتهاء التكرار</label>
+                            <input
+                                type="date"
+                                className="w-full border rounded-lg p-2"
+                                value={formData.recurrenceEnd}
+                                onChange={e => setFormData({ ...formData, recurrenceEnd: e.target.value })}
+                                required
+                            />
+                        </div>
                     )}
 
                     {/* Edit Mode Options (Only if Recurring Event Selected) */}
@@ -439,7 +469,7 @@ export default function ManageCalendar() {
             </div>
 
             {/* Calendar */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[600px]">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[800px] flex flex-col gap-4">
                 <DnDCalendar
                     localizer={localizer}
                     events={events}
@@ -449,6 +479,7 @@ export default function ManageCalendar() {
                     messages={calendarMessages}
                     rtl={true}
                     culture='ar'
+                    views={['month', 'week', 'agenda']} // Back to array, simpler
                     onSelectSlot={handleSelectSlot}
                     onSelectEvent={handleSelectEvent}
                     onEventDrop={handleEventDrop}
@@ -461,7 +492,24 @@ export default function ManageCalendar() {
                         }
                     }}
                     formats={{
-                        monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc)
+                        monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc),
+                        dayFormat: (date, culture, loc) => {
+                            // For Week View Header: "الاثنين 04"
+                            const d = date.getDay();
+                            const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                            return `${names[d]} ${date.getDate()}`;
+                        },
+                        weekdayFormat: (date, culture, loc) => {
+                            // For Month View Header: "الاثنين"
+                            const d = date.getDay();
+                            const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                            return names[d];
+                        },
+                        agendaDateFormat: (date, culture, loc) => {
+                            const d = date.getDay();
+                            const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                            return `${names[d]} ${date.getDate()} ${loc.format(date, 'MMM', culture)}`;
+                        }
                     }}
                     eventPropGetter={(event) => ({
                         style: {
@@ -481,110 +529,127 @@ export default function ManageCalendar() {
                     <div className="p-8 text-center text-gray-400">لا توجد أحداث</div>
                 ) : (
                     <div className="divide-y divide-gray-100">
-                        {groupedEvents.map((item, idx) => {
-                            if (item.isGroup) {
-                                const isExpanded = expandedGroups[item.seriesId];
-                                return (
-                                    <div key={'group-' + item.seriesId} className="bg-gray-50/50">
-                                        {/* Series Header Row */}
-                                        <div
-                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
-                                            onClick={() => toggleGroup(item.seriesId)}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : 'rotate-180'}`}>
-                                                    ▼
-                                                </span>
-                                                <div>
-                                                    <div className="font-bold text-gray-800 flex items-center gap-2">
-                                                        {item.title}
-                                                        <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">سلسلة ({item.events.length} حدث)</span>
-                                                    </div>
-                                                    <div className="text-sm text-gray-500 mt-1">
-                                                        يبدأ: {new Date(item.events[item.events.length - 1].start).toLocaleDateString()} -
-                                                        ينتهي: {new Date(item.events[0].start).toLocaleDateString()}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSeries(item.seriesId); }}
-                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg text-sm flex items-center gap-1"
-                                                >
-                                                    <Trash2 size={16} />
-                                                    <span className="hidden sm:inline">حذف السلسلة</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                        {[
+                            { id: '', name: 'عام / مشترك' },
+                            ...(data.branches || [])
+                        ].map(branch => {
+                            const branchItems = groupedEvents.filter(i => (i.branchId || '') === (branch.id || ''));
+                            if (branchItems.length === 0) return null;
 
-                                        {/* Expanded Children */}
-                                        {isExpanded && (
-                                            <div className="bg-white border-y border-gray-100 divide-y divide-gray-50 pr-8">
-                                                {item.events
-                                                    .sort((a, b) => new Date(a.start) - new Date(b.start))
-                                                    .map(ev => (
-                                                        <div key={ev.id} className="p-3 flex items-center justify-between hover:bg-gray-50 pl-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="text-sm font-medium text-gray-700">
-                                                                    {new Date(ev.start).toLocaleDateString()}
-                                                                </div>
-                                                                <div className="text-sm text-gray-400">
-                                                                    {new Date(ev.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            return (
+                                <div key={branch.id || 'general'} className="border-b border-gray-200 last:border-0">
+                                    <div className="bg-gray-100 p-3 px-4 text-sm font-bold text-gray-700">
+                                        {branch.name}
+                                    </div>
+                                    <div className="divide-y divide-gray-100">
+                                        {branchItems.map((item) => {
+                                            if (item.isGroup) {
+                                                const isExpanded = expandedGroups[item.seriesId];
+                                                return (
+                                                    <div key={'group-' + item.seriesId} className="bg-gray-50/50">
+                                                        {/* Series Header Row */}
+                                                        <div
+                                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                                                            onClick={() => toggleGroup(item.seriesId)}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : 'rotate-180'}`}>
+                                                                    ▼
+                                                                </span>
+                                                                <div>
+                                                                    <div className="font-bold text-gray-800 flex items-center gap-2">
+                                                                        {item.title}
+                                                                        <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">سلسلة ({item.events.length} حدث)</span>
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-500 mt-1">
+                                                                        يبدأ: {new Date(item.events[item.events.length - 1].start).toLocaleDateString()} -
+                                                                        ينتهي: {new Date(item.events[0].start).toLocaleDateString()}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex gap-2">
+                                                            <div className="flex items-center gap-2">
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleSelectEvent(ev); }}
-                                                                    className="text-blue-500 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSeries(item.seriesId); }}
+                                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg text-sm flex items-center gap-1"
                                                                 >
-                                                                    تعديل
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteInstance(ev, 'single'); }}
-                                                                    className="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded"
-                                                                >
-                                                                    حذف
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteInstance(ev, 'future'); }}
-                                                                    className="text-orange-500 hover:text-orange-700 text-xs px-2 py-1 bg-orange-50 rounded"
-                                                                >
-                                                                    حذف هذا والتالي
+                                                                    <Trash2 size={16} />
+                                                                    <span className="hidden sm:inline">حذف السلسلة</span>
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    ))}
-                                            </div>
-                                        )}
+
+                                                        {/* Expanded Children */}
+                                                        {isExpanded && (
+                                                            <div className="bg-white border-y border-gray-100 divide-y divide-gray-50 pr-8">
+                                                                {item.events
+                                                                    .sort((a, b) => new Date(a.start) - new Date(b.start))
+                                                                    .map(ev => (
+                                                                        <div key={ev.id} className="p-3 flex items-center justify-between hover:bg-gray-50 pl-4">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="text-sm font-medium text-gray-700">
+                                                                                    {new Date(ev.start).toLocaleDateString()}
+                                                                                </div>
+                                                                                <div className="text-sm text-gray-400">
+                                                                                    {new Date(ev.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex gap-2">
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); handleSelectEvent(ev); }}
+                                                                                    className="text-blue-500 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
+                                                                                >
+                                                                                    تعديل
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteInstance(ev, 'single'); }}
+                                                                                    className="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded"
+                                                                                >
+                                                                                    حذف
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteInstance(ev, 'future'); }}
+                                                                                    className="text-orange-500 hover:text-orange-700 text-xs px-2 py-1 bg-orange-50 rounded"
+                                                                                >
+                                                                                    حذف هذا والتالي
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            } else {
+                                                // Single Event
+                                                return (
+                                                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                                        <div className="font-medium text-gray-800">
+                                                            {item.title}
+                                                            <div className="text-xs text-gray-400 font-normal mt-0.5">
+                                                                {new Date(item.start).toLocaleDateString()} - {new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleSelectEvent(item)}
+                                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                                                            >
+                                                                <Edit size={18} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteInstance(item, 'single')}
+                                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                        })}
                                     </div>
-                                );
-                            } else {
-                                // Single Event
-                                return (
-                                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                        <div className="font-medium text-gray-800">
-                                            {item.title}
-                                            <div className="text-xs text-gray-400 font-normal mt-0.5">
-                                                {new Date(item.start).toLocaleDateString()} - {new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleSelectEvent(item)}
-                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-                                            >
-                                                <Edit size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteInstance(item, 'single')}
-                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            }
+                                </div>
+                            );
                         })}
                     </div>
                 )}

@@ -5,6 +5,11 @@ import { Link } from 'react-router-dom';
 export default function Home() {
     const { data, loading } = useData();
 
+    // Filter levels to only show those that have content associated with them
+    const visibleLevels = data.levels?.filter(level =>
+        data.contents?.some(content => content.levelId === level.id)
+    ) || [];
+
     return (
         <div className="flex flex-col gap-8">
             {/* Hero Section */}
@@ -29,9 +34,9 @@ export default function Home() {
                     <div className="text-center py-10 text-gray-400">
                         جاري التحميل...
                     </div>
-                ) : data.levels && data.levels.length > 0 ? (
+                ) : visibleLevels.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {data.levels.map((level) => (
+                        {visibleLevels.map((level) => (
                             <Link
                                 key={level.id}
                                 to={`/level/${level.id}`}
@@ -49,7 +54,9 @@ export default function Home() {
                 ) : (
                     <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                         <p className="text-gray-400 text-sm">
-                            لا توجد مستويات دراسية حالياً
+                            {(data.levels && data.levels.length > 0)
+                                ? "لا يوجد محتوى متاح حالياً في أي مستوى"
+                                : "لا توجد مستويات دراسية حالياً"}
                         </p>
                     </div>
                 )}

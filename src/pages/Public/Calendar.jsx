@@ -25,8 +25,8 @@ export default function Calendar() {
         setSelectedEvent(event);
     };
 
-    // Map events to BigCalendar format and enrich with related data
-    const events = (data.events || []).map(event => {
+    // Enrich events
+    const allEvents = (data.events || []).map(event => {
         const teacher = data.teachers?.find(t => t.id === event.teacherId);
         const room = data.rooms?.find(r => r.id === event.roomId);
 
@@ -39,35 +39,89 @@ export default function Calendar() {
         };
     });
 
-    return (
-        <div className="h-[800px] flex flex-col gap-4">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">الجدول الزمني</h1>
+    // Group events by Branch
+    // 1. Specific Branches
+    // 2. No Branch (General)
+    const branches = data.branches || [];
 
-                <BigCalendar
-                    localizer={localizer}
-                    events={events}
-                    startAccessor="start"
-                    endAccessor="end"
-                    style={{ height: '100%' }}
-                    messages={calendarMessages}
-                    rtl={true}
-                    culture='ar'
-                    onSelectEvent={handleSelectEvent}
-                    components={{
-                        toolbar: CustomToolbar,
-                        month: {
-                            dateHeader: CustomDateHeader
-                        }
-                    }}
-                    eventPropGetter={(event) => ({
-                        style: {
-                            backgroundColor: '#8DC63F',
-                            color: 'white',
-                        }
-                    })}
-                />
-            </div>
+    const calendarsToRender = [];
+
+    // Add Branch Calendars
+    branches.forEach(branch => {
+        const branchEvents = allEvents.filter(e => e.branchId === branch.id);
+        if (branchEvents.length > 0 || true) { // Always show branch calendars even if empty? User said "if we have two branches, we show two calendars".
+            calendarsToRender.push({
+                id: branch.id,
+                title: `جدول ${branch.name}`,
+                events: branchEvents
+            });
+        }
+    });
+
+    // Add General/Global events (those with no branchId set)
+    const generalEvents = allEvents.filter(e => !e.branchId);
+    if (generalEvents.length > 0) {
+        calendarsToRender.push({
+            id: 'general',
+            title: 'الجدول العام',
+            events: generalEvents
+        });
+    }
+
+    return (
+        <div className="flex flex-col gap-12">
+            {calendarsToRender.map(cal => (
+                <div key={cal.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[850px] flex flex-col gap-4">
+                    <h1 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4 border-gray-100">
+                        {cal.title}
+                    </h1>
+
+                    <BigCalendar
+                        localizer={localizer}
+                        events={cal.events}
+                        startAccessor="start"
+                        endAccessor="end"
+                        style={{ height: '100%' }}
+                        messages={calendarMessages}
+                        rtl={true}
+                        culture='ar'
+                        views={['month', 'week', 'agenda']}
+                        onSelectEvent={handleSelectEvent}
+                        components={{
+                            toolbar: CustomToolbar,
+                            month: {
+                                dateHeader: CustomDateHeader
+                            }
+                        }}
+                        formats={{
+                            monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc),
+                            dayFormat: (date, culture, loc) => {
+                                // For Week View Header: "الاثنين 04"
+                                const d = date.getDay();
+                                const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                                return `${names[d]} ${date.getDate()}`;
+                            },
+                            weekdayFormat: (date, culture, loc) => {
+                                // For Month View Header: "الاثنين"
+                                const d = date.getDay();
+                                const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                                return names[d];
+                            },
+                            agendaDateFormat: (date, culture, loc) => {
+                                const d = date.getDay();
+                                const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                                return `${names[d]} ${date.getDate()} ${loc.format(date, 'MMM', culture)}`;
+                            }
+                        }}
+                        eventPropGetter={(event) => ({
+                            style: {
+                                backgroundColor: '#8DC63F',
+                                color: 'white',
+                            }
+                        })}
+                    />
+                </div>
+            ))}
 
             {selectedEvent && (
                 <EventModal

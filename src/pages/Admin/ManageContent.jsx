@@ -1,21 +1,102 @@
 import { useState, useEffect } from 'react';
 import { dbService } from '../../services/db';
 import { useData } from '../../context/DataContext';
-import { Save, Trash2, Edit, Plus, Link as LinkIcon, Headphones, Video, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { Save, Trash2, Edit, Plus, Video, Headphones, FileText } from 'lucide-react';
 import { toWesternNumerals } from '../../utils/dateUtils';
 import { BackButton } from '../../components/Navbar';
+import DataImportExportComponent from '../../components/DataImportExport';
 
 export default function ManageContent() {
   const { data, refreshData } = useData();
+  const { currentUser } = useAuth();
   const [contents, setContents] = useState([]);
-  const [formData, setFormData] = useState({ title: '', type: 'video', levelId: '', urls: [''] });
+  const [formData, setFormData] = useState({
+    title: '',
+    type: 'video',
+    levelId: '',
+    schoolYear: '2025-2026',
+    urls: [''],
+    branchId: ''
+  });
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const handleImport = async (parsedData) => {
+    setLoading(true);
+    try {
+      const validContents = [];
+      for (const row of parsedData) {
+        // Level Lookup
+        let levelId = '';
+        if (row['levelId']) levelId = row['levelId'];
+        else if (row['Level'] || row['المستوى']) {
+          const search = row['Level'] || row['المستوى'];
+          const level = data.levels?.find(l => l.title === search);
+          if (level) levelId = level.id;
+        }
+
+        // Branch Lookup
+        let branchId = '';
+        if (row['branchId']) branchId = row['branchId'];
+        else if (row['Branch'] || row['الفرع']) {
+          const search = row['Branch'] || row['الفرع'];
+          const branch = data.branches?.find(b => b.name === search);
+          if (branch) branchId = branch.id;
+        }
+
+        // Type
+        let type = 'video';
+        const typeRaw = row['Type'] || row['النوع'];
+        if (typeRaw === 'audio' || typeRaw === 'صوت') type = 'audio';
+        if (typeRaw === 'pdf' || typeRaw === 'ملف') type = 'pdf';
+
+        // URLs
+        const url = row['URL'] || row['الرابط'] || '';
+
+        if (row['Title'] || row['العنوان']) {
+          validContents.push({
+            title: row['Title'] || row['العنوان'],
+            type,
+            levelId,
+            branchId,
+            urls: [url],
+            schoolYear: row['School Year'] || row['السنة الدراسية'] || '2025-2026'
+          });
+        }
+      }
+
+      if (validContents.length > 0) {
+        await Promise.all(validContents.map(c => dbService.add('contents', c)));
+        await refreshData();
+        alert('تم استيراد المحتوى بنجاح');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('فشل الاستيراد');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (data.contents) setContents(data.contents);
-  }, [data.contents]);
+    if (data.contents) {
+      if (currentUser?.role === 'super-admin') {
+        setContents(data.contents);
+      } else if (currentUser?.branchId) {
+        // Show content for their branch OR general content (optional, but usually admins manage their own)
+        // Let's filtered to their branch + general for viewing, but mainly they edit theirs.
+        // Actually, usually admins only see what they can edit?
+        // User request: "an admin should be assigned to a branch... all dropdowns initialized"
+        // Let's filter to just their branch for simplicity to avoid confusion, or strictly follow
+        // what they manage.
+        setContents(data.contents.filter(c => c.branchId === currentUser.branchId));
+
+        // Initialize form data 
+        setFormData(prev => ({ ...prev, branchId: currentUser.branchId }));
+      }
+    }
+  }, [data.contents, currentUser]);
 
   const handleUrlChange = (index, value) => {
     const newUrls = [...formData.urls];
@@ -73,20 +154,42 @@ export default function ManageContent() {
       title: content.title,
       type: content.type,
       levelId: content.levelId,
-      urls: content.urls && content.urls.length > 0 ? content.urls : [content.url || '']
+      schoolYear: content.schoolYear || '2025-2026',
+      urls: content.urls && content.urls.length > 0 ? content.urls : [content.url || ''],
+      branchId: content.branchId || ''
     });
   };
 
   const resetForm = () => {
     setSelectedId(null);
-    setFormData({ title: '', type: 'video', levelId: '', urls: [''] });
+    setFormData({
+      title: '',
+      type: 'video',
+      levelId: '',
+      schoolYear: '2025-2026',
+      urls: [''],
+      branchId: currentUser?.role === 'super-admin' ? '' : (currentUser?.branchId || '')
+    });
   };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">إدارة المحتوى</h1>
-        <BackButton />
+        <div className="flex items-center gap-2">
+          <DataImportExportComponent
+            data={contents}
+            fileName="content_library.csv"
+            onImport={handleImport}
+            headerMap={{
+              'title': 'العنوان',
+              'type': 'النوع',
+              'schoolYear': 'السنة الدراسية'
+            }}
+            templateHeaders={['Title', 'Type', 'URL', 'Level', 'Branch', 'School Year']}
+          />
+          <BackButton />
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -119,6 +222,26 @@ export default function ManageContent() {
               </select>
             </div>
             <div className="space-y-1">
+              <label className="text-sm text-gray-500">الفرع</label>
+              <select
+                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none disabled:bg-gray-100"
+                value={formData.branchId}
+                onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                disabled={currentUser?.role !== 'super-admin'} // Disable if not super admin
+              >
+                {currentUser?.role === 'super-admin' && <option value="">عام / مشترك</option>}
+                {/* 
+                    If super admin, show all branches.
+                    If regular admin, show ONLY their branch (effectively locked selection).
+                 */}
+                {data.branches?.map(b => {
+                  // If regular admin, only show their branch
+                  if (currentUser?.role !== 'super-admin' && currentUser?.branchId !== b.id) return null;
+                  return <option key={b.id} value={b.id}>{b.name}</option>
+                })}
+              </select>
+            </div>
+            <div className="space-y-1">
               <label className="text-sm text-gray-500">المستوى الدراسي</label>
               <select
                 required
@@ -129,6 +252,16 @@ export default function ManageContent() {
                 <option value="">اختيار المستوى...</option>
                 {data.levels?.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
               </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm text-gray-500">السنة الدراسية</label>
+              <input
+                required
+                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+                placeholder="2025-2026"
+                value={formData.schoolYear}
+                onChange={(e) => setFormData({ ...formData, schoolYear: toWesternNumerals(e.target.value) })}
+              />
             </div>
           </div>
 
@@ -169,7 +302,7 @@ export default function ManageContent() {
             </button>
           </div>
         </form>
-      </div>
+      </div >
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-600 text-sm">
@@ -179,8 +312,9 @@ export default function ManageContent() {
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
             <tr>
               <th className="p-4">العنوان</th>
-              <th className="p-4">النوع</th>
               <th className="p-4">المستوى</th>
+              <th className="p-4">الفرع</th>
+              <th className="p-4">السنة الدراسية</th>
               <th className="p-4">الإجراءات</th>
             </tr>
           </thead>
@@ -189,14 +323,24 @@ export default function ManageContent() {
               const level = data.levels?.find(l => l.id === c.levelId);
               return (
                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4 font-medium text-gray-800">{c.title}</td>
-                  <td className="p-4 text-gray-600">
-                    <span className="flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded w-fit">
-                      {c.type === 'video' ? <Video size={14} /> : c.type === 'audio' ? <Headphones size={14} /> : <FileText size={14} />}
-                      {c.type === 'video' ? 'فيديو' : c.type === 'audio' ? 'صوت' : 'ملف'}
-                    </span>
+                  <td className="p-4 font-medium text-gray-800">
+                    <div className="flex flex-col">
+                      <span>{c.title}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                        {c.type === 'video' ? <Video size={10} /> : c.type === 'audio' ? <Headphones size={10} /> : <FileText size={10} />}
+                        {c.type === 'video' ? 'فيديو' : c.type === 'audio' ? 'صوت' : 'ملف'}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-4 text-gray-600">{level?.title || '-'}</td>
+                  <td className="p-4 text-gray-600">
+                    {(() => {
+                      if (!c.branchId) return <span className="text-xs bg-gray-100 px-2 py-1 rounded">عام</span>;
+                      const b = data.branches?.find(br => br.id === c.branchId);
+                      return b ? b.name : '-';
+                    })()}
+                  </td>
+                  <td className="p-4 text-gray-600 font-mono text-sm">{c.schoolYear || '-'}</td>
                   <td className="p-4 flex gap-2">
                     <button onClick={() => handleEdit(c)} className="text-blue-500 hover:text-blue-700">
                       <Edit size={18} />
@@ -214,6 +358,6 @@ export default function ManageContent() {
           <div className="p-8 text-center text-gray-400">لا يوجد محتوى</div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

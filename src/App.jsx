@@ -9,6 +9,9 @@ import ManageLevels from './pages/Admin/ManageLevels';
 import ManageRooms from './pages/Admin/ManageRooms';
 import ManageTeachers from './pages/Admin/ManageTeachers';
 import ManageContent from './pages/Admin/ManageContent';
+import ManageAdmins from './pages/Admin/ManageAdmins';
+import ManageStudents from './pages/Admin/ManageStudents';
+import GradeEntry from './pages/Admin/GradeEntry';
 import Trash from './pages/Admin/Trash';
 import { useAuth } from './context/AuthContext';
 
@@ -46,6 +49,9 @@ function App() {
                   <Route path="rooms" element={<ManageRooms />} />
                   <Route path="teachers" element={<ManageTeachers />} />
                   <Route path="content" element={<ManageContent />} />
+                  <Route path="students" element={<ManageStudents />} />
+                  <Route path="admins" element={<ManageAdmins />} />
+                  <Route path="grades" element={<GradeEntry />} />
                   <Route path="trash" element={<Trash />} />
                   <Route path="*" element={<div className="text-center p-10">صفحة قيد التطوير</div>} />
                 </Routes>
