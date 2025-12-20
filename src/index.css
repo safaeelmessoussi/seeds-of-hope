@@ -71,5 +71,35 @@ body {
 
 /* In RTL the border logic usually flips, RBC handles some, but sometimes manual overrides help */
 
+/* Fix time-view (weekly/agenda) to fill container properly */
+.rbc-time-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
 
-/* Day names correction might be JS, but let's see if we can tweak styles */
+.rbc-time-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Ensure the calendar fills its parent container */
+.rbc-calendar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rbc-month-view {
+  flex: 1;
+  min-height: 0;
+}
+
+.rbc-agenda-view {
+  flex: 1;
+  overflow: auto;
+}

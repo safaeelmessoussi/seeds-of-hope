@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Users, Calendar, Eraser, Layers, ArchiveRestore, GraduationCap, Award, Shield } from 'lucide-react';
-import SeedDatabase from '../../components/SeedDatabase';
+import { LayoutDashboard, BookOpen, Users, Calendar, Layers, ArchiveRestore, GraduationCap, Award, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminDashboard() {
@@ -26,8 +25,6 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-800">لوحة التحكم</h1>
             </div>
-
-            <SeedDatabase />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {menuItems.map((item, index) => (

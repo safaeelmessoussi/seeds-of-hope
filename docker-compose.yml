@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  seeds-of-hope:
+    build: .
+    container_name: seeds-of-hope
+    restart: unless-stopped
+    ports:
+      - "3095:80"
+    networks:
+      - n8n_network
+
+networks:
+  n8n_network:
+    external: true

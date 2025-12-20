@@ -12,13 +12,29 @@ import CustomToolbar from '../../components/CalendarToolbar';
 
 const DnDCalendar = withDragAndDrop(BigCalendar);
 
-// Custom Date Header Component
+// Custom Date Header Component (Month View)
 const CustomDateHeader = ({ date, label }) => {
     const { day } = getHijriParts(date);
     return (
         <div className="flex justify-between px-1 text-xs font-bold w-full">
             <span className="text-[#8DC63F]">{label}</span>
             <span className="text-[#F39200]">{day}</span>
+        </div>
+    );
+};
+
+// Custom Week Header Component - [Hijri day] [Day name] [Gregorian day]
+const CustomWeekHeader = ({ date, label }) => {
+    const { day: hijriDay } = getHijriParts(date);
+    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayName = dayNames[date.getDay()];
+    const gregorianDay = date.getDate();
+
+    return (
+        <div className="flex items-center justify-center gap-2 text-sm font-bold py-1">
+            <span className="text-[#F39200]">{hijriDay}</span>
+            <span className="text-gray-700">{dayName}</span>
+            <span className="text-[#8DC63F]">{gregorianDay}</span>
         </div>
     );
 };
@@ -489,16 +505,13 @@ export default function ManageCalendar() {
                         toolbar: CustomToolbar,
                         month: {
                             dateHeader: CustomDateHeader
+                        },
+                        week: {
+                            header: CustomWeekHeader
                         }
                     }}
                     formats={{
                         monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc),
-                        dayFormat: (date, culture, loc) => {
-                            // For Week View Header: "الاثنين 04"
-                            const d = date.getDay();
-                            const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-                            return `${names[d]} ${date.getDate()}`;
-                        },
                         weekdayFormat: (date, culture, loc) => {
                             // For Month View Header: "الاثنين"
                             const d = date.getDay();
@@ -530,7 +543,7 @@ export default function ManageCalendar() {
                 ) : (
                     <div className="divide-y divide-gray-100">
                         {[
-                            { id: '', name: 'عام / مشترك' },
+                            // { id: '', name: 'عام / مشترك' }, // Removed as per request
                             ...(data.branches || [])
                         ].map(branch => {
                             const branchItems = groupedEvents.filter(i => (i.branchId || '') === (branch.id || ''));

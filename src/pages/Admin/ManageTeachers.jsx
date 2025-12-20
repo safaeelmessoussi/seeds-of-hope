@@ -135,7 +135,7 @@ export default function ManageTeachers() {
               'email': 'البريد الإلكتروني',
               'phone': 'رقم الهاتف'
             }}
-            templateHeaders={['Name', 'Email', 'Phone']}
+            templateHeaders={['الاسم', 'البريد الإلكتروني', 'رقم الهاتف']}
           />
           <BackButton />
         </div>
@@ -169,6 +169,7 @@ export default function ManageTeachers() {
             />
           </div>
           <div className="space-y-1">
+            <label className="text-sm text-gray-500">رقم الهاتف</label>
             <input
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none text-left dir-ltr placeholder:text-right"
               placeholder="05xxxxxxxx"

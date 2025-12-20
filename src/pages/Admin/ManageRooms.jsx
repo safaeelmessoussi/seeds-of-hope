@@ -335,7 +335,7 @@ export default function ManageRooms() {
             fileName={activeTab === 'branches' ? "branches.csv" : "rooms.csv"}
             onImport={handleImport}
             headerMap={activeTab === 'branches' ? { 'name': 'الاسم', 'code': 'الرمز' } : { 'name': 'الاسم', 'capacity': 'السعة', 'type': 'النوع' }}
-            templateHeaders={activeTab === 'branches' ? ['Name', 'Code'] : ['Name', 'Capacity', 'Type', 'Branch']}
+            templateHeaders={activeTab === 'branches' ? ['\u0627\u0644\u0627\u0633\u0645', '\u0627\u0644\u0631\u0645\u0632'] : ['\u0627\u0644\u0627\u0633\u0645', '\u0627\u0644\u0633\u0639\u0629', '\u0627\u0644\u0646\u0648\u0639', '\u0627\u0644\u0641\u0631\u0639']}
           />
           <BackButton />
         </div>

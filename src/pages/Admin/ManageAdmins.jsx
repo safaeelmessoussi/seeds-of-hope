@@ -17,6 +17,39 @@ export default function ManageAdmins() {
     const [formData, setFormData] = useState({ email: '', role: 'admin', branchId: '' });
     const [selectedId, setSelectedId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedIds(admins.map(a => a.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(item => item !== id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} مسؤول؟`)) return;
+
+        try {
+            // Filter out super-admins or self if needed?
+            // Assuming simplified logic: cannot delete 'super-admin' if not super-admin etc. 
+            // But role check is at route level. 
+            await Promise.all(selectedIds.map(id => dbService.remove('users', id)));
+            await refreshData();
+            setSelectedIds([]);
+        } catch (e) {
+            alert('فشل الحذف الجماعي');
+        }
+    };
 
     const handleImport = async (parsedData) => {
         setLoading(true);
@@ -178,12 +211,21 @@ export default function ManageAdmins() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-800">إدارة المسؤولين</h1>
                 <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-bold text-sm"
+                        >
+                            <Trash2 size={18} />
+                            حذف المحدد ({selectedIds.length})
+                        </button>
+                    )}
                     <DataImportExportComponent
                         data={admins}
                         fileName="admins_export.csv"
                         onImport={handleImport}
                         headerMap={{ 'email': 'البريد الإلكتروني', 'role': 'الدور' }}
-                        templateHeaders={['Email', 'Role', 'Branch']}
+                        templateHeaders={['\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a', '\u0627\u0644\u062f\u0648\u0631', '\u0627\u0644\u0641\u0631\u0639']}
                     />
                     <BackButton />
                 </div>
@@ -257,6 +299,13 @@ export default function ManageAdmins() {
                 <table className="w-full text-right">
                     <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
                         <tr>
+                            <th className="p-4 w-4">
+                                <input
+                                    type="checkbox"
+                                    onChange={handleSelectAll}
+                                    checked={admins.length > 0 && selectedIds.length === admins.length}
+                                />
+                            </th>
                             <th className="p-4">البريد الإلكتروني</th>
                             <th className="p-4">الدور</th>
                             <th className="p-4">الفرع</th>
@@ -268,6 +317,13 @@ export default function ManageAdmins() {
                             const branch = data.branches?.find(b => b.id === admin.branchId);
                             return (
                                 <tr key={admin.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="p-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(admin.id)}
+                                            onChange={(e) => handleSelectOne(admin.id, e.target.checked)}
+                                        />
+                                    </td>
                                     <td className="p-4 font-medium text-gray-800 dir-ltr text-right">{admin.email}</td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-xs ${admin.role === 'super-admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>

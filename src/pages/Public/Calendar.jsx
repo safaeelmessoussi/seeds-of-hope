@@ -7,12 +7,29 @@ import CustomToolbar from '../../components/CalendarToolbar';
 import { useState } from 'react';
 import EventModal from '../../components/EventModal';
 
+// Month View Date Header (for day cells)
 const CustomDateHeader = ({ date, label }) => {
     const { day } = getHijriParts(date);
     return (
         <div className="flex justify-between px-1 text-xs font-bold w-full">
             <span className="text-[#8DC63F]">{label}</span>
             <span className="text-[#F39200]">{day}</span>
+        </div>
+    );
+};
+
+// Week View Header (for column headers) - [Hijri day] [Day name] [Gregorian day]
+const CustomWeekHeader = ({ date, label }) => {
+    const { day: hijriDay } = getHijriParts(date);
+    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayName = dayNames[date.getDay()];
+    const gregorianDay = date.getDate();
+
+    return (
+        <div className="flex items-center justify-center gap-2 text-sm font-bold py-1">
+            <span className="text-[#F39200]">{hijriDay}</span>
+            <span className="text-gray-700">{dayName}</span>
+            <span className="text-[#8DC63F]">{gregorianDay}</span>
         </div>
     );
 };
@@ -58,15 +75,15 @@ export default function Calendar() {
         }
     });
 
-    // Add General/Global events (those with no branchId set)
+    // Add General/Global events removed as per request
     const generalEvents = allEvents.filter(e => !e.branchId);
-    if (generalEvents.length > 0) {
+    /* if (generalEvents.length > 0) {
         calendarsToRender.push({
             id: 'general',
             title: 'الجدول العام',
             events: generalEvents
         });
-    }
+    } */
 
     return (
         <div className="flex flex-col gap-12">
@@ -91,16 +108,13 @@ export default function Calendar() {
                             toolbar: CustomToolbar,
                             month: {
                                 dateHeader: CustomDateHeader
+                            },
+                            week: {
+                                header: CustomWeekHeader
                             }
                         }}
                         formats={{
                             monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc),
-                            dayFormat: (date, culture, loc) => {
-                                // For Week View Header: "الاثنين 04"
-                                const d = date.getDay();
-                                const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-                                return `${names[d]} ${date.getDate()}`;
-                            },
                             weekdayFormat: (date, culture, loc) => {
                                 // For Month View Header: "الاثنين"
                                 const d = date.getDay();

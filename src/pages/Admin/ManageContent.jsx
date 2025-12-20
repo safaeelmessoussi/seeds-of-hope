@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { dbService } from '../../services/db';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Trash2, Edit, Plus, Video, Headphones, FileText } from 'lucide-react';
+import { Save, Trash2, Edit, Plus, Video, Headphones, FileText, Image } from 'lucide-react';
 import { toWesternNumerals } from '../../utils/dateUtils';
 import { BackButton } from '../../components/Navbar';
 import DataImportExportComponent from '../../components/DataImportExport';
@@ -21,6 +21,36 @@ export default function ManageContent() {
   });
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(contents.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, checked) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} عنصر محتوى؟`)) return;
+
+    try {
+      await Promise.all(selectedIds.map(id => dbService.remove('contents', id)));
+      await refreshData();
+      setSelectedIds([]);
+    } catch (e) {
+      alert('فشل الحذف الجماعي');
+    }
+  };
 
   const handleImport = async (parsedData) => {
     setLoading(true);
@@ -50,6 +80,7 @@ export default function ManageContent() {
         const typeRaw = row['Type'] || row['النوع'];
         if (typeRaw === 'audio' || typeRaw === 'صوت') type = 'audio';
         if (typeRaw === 'pdf' || typeRaw === 'ملف') type = 'pdf';
+        if (typeRaw === 'image' || typeRaw === 'صورة' || typeRaw === 'photo') type = 'image';
 
         // URLs
         const url = row['URL'] || row['الرابط'] || '';
@@ -177,6 +208,15 @@ export default function ManageContent() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">إدارة المحتوى</h1>
         <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-bold text-sm"
+            >
+              <Trash2 size={18} />
+              حذف المحدد ({selectedIds.length})
+            </button>
+          )}
           <DataImportExportComponent
             data={contents}
             fileName="content_library.csv"
@@ -186,7 +226,7 @@ export default function ManageContent() {
               'type': 'النوع',
               'schoolYear': 'السنة الدراسية'
             }}
-            templateHeaders={['Title', 'Type', 'URL', 'Level', 'Branch', 'School Year']}
+            templateHeaders={['العنوان', 'النوع', 'الرابط', 'المستوى', 'الفرع', 'السنة الدراسية']}
           />
           <BackButton />
         </div>
@@ -219,6 +259,7 @@ export default function ManageContent() {
                 <option value="video">فيديو (Video)</option>
                 <option value="audio">صوت (Audio)</option>
                 <option value="pdf">ملف (PDF)</option>
+                <option value="image">صورة (Image)</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -250,7 +291,16 @@ export default function ManageContent() {
                 onChange={(e) => setFormData({ ...formData, levelId: e.target.value })}
               >
                 <option value="">اختيار المستوى...</option>
-                {data.levels?.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
+                {/* Sort levels: women first, then girls, then children. Within each category sort by order */}
+                {[...(data.levels || [])]
+                  .sort((a, b) => {
+                    const categoryOrder = { women: 1, girls: 2, children: 3 };
+                    const catA = categoryOrder[a.category] || 99;
+                    const catB = categoryOrder[b.category] || 99;
+                    if (catA !== catB) return catA - catB;
+                    return (a.order || 0) - (b.order || 0);
+                  })
+                  .map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
               </select>
             </div>
             <div className="space-y-1">
@@ -311,6 +361,13 @@ export default function ManageContent() {
         <table className="w-full text-right">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
             <tr>
+              <th className="p-4 w-4">
+                <input
+                  type="checkbox"
+                  onChange={handleSelectAll}
+                  checked={contents.length > 0 && selectedIds.length === contents.length}
+                />
+              </th>
               <th className="p-4">العنوان</th>
               <th className="p-4">المستوى</th>
               <th className="p-4">الفرع</th>
@@ -323,12 +380,19 @@ export default function ManageContent() {
               const level = data.levels?.find(l => l.id === c.levelId);
               return (
                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(c.id)}
+                      onChange={(e) => handleSelectOne(c.id, e.target.checked)}
+                    />
+                  </td>
                   <td className="p-4 font-medium text-gray-800">
                     <div className="flex flex-col">
                       <span>{c.title}</span>
                       <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                        {c.type === 'video' ? <Video size={10} /> : c.type === 'audio' ? <Headphones size={10} /> : <FileText size={10} />}
-                        {c.type === 'video' ? 'فيديو' : c.type === 'audio' ? 'صوت' : 'ملف'}
+                        {c.type === 'video' ? <Video size={10} /> : c.type === 'audio' ? <Headphones size={10} /> : c.type === 'image' ? <Image size={10} /> : <FileText size={10} />}
+                        {c.type === 'video' ? 'فيديو' : c.type === 'audio' ? 'صوت' : c.type === 'image' ? 'صورة' : 'ملف'}
                       </span>
                     </div>
                   </td>

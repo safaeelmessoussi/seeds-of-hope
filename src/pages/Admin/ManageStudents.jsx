@@ -16,6 +16,36 @@ export default function ManageStudents() {
     });
     const [selectedId, setSelectedId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedIds(students.map(s => s.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(item => item !== id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`هل أنت متأكد من حذف ${selectedIds.length} طالب؟`)) return;
+
+        try {
+            await Promise.all(selectedIds.map(id => dbService.remove('students', id)));
+            await refreshData();
+            setSelectedIds([]);
+        } catch (e) {
+            alert('فشل الحذف الجماعي');
+        }
+    };
 
     useEffect(() => {
         if (data.students) setStudents(data.students);
@@ -128,6 +158,15 @@ export default function ManageStudents() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-800">إدارة المستفيدين (الطلاب)</h1>
                 <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-bold text-sm"
+                        >
+                            <Trash2 size={18} />
+                            حذف المحدد ({selectedIds.length})
+                        </button>
+                    )}
                     <DataImportExportComponent
                         data={students}
                         fileName="students_export.csv"
@@ -138,7 +177,7 @@ export default function ManageStudents() {
                             'branchId': 'Branch ID', // Usually we want names in export, but IDs are safer for re-import. 
                             // Let's rely on data mapping.
                         }}
-                        templateHeaders={['Name', 'Category', 'Branch', 'Level']}
+                        templateHeaders={['الاسم', 'الفئة', 'الفرع', 'المستوى']}
                     />
                     <BackButton />
                 </div>
@@ -228,6 +267,13 @@ export default function ManageStudents() {
                 <table className="w-full text-right">
                     <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
                         <tr>
+                            <th className="p-4 w-4">
+                                <input
+                                    type="checkbox"
+                                    onChange={handleSelectAll}
+                                    checked={students.length > 0 && selectedIds.length === students.length}
+                                />
+                            </th>
                             <th className="p-4">الاسم</th>
                             <th className="p-4">الفئة</th>
                             <th className="p-4">الفرع</th>
@@ -241,6 +287,13 @@ export default function ManageStudents() {
                             const level = data.levels?.find(l => l.id === s.levelId);
                             return (
                                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="p-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(s.id)}
+                                            onChange={(e) => handleSelectOne(s.id, e.target.checked)}
+                                        />
+                                    </td>
                                     <td className="p-4 font-medium text-gray-800">{s.name}</td>
                                     <td className="p-4 text-gray-600">
                                         {s.category === 'children' ? 'أطفال' : s.category === 'women' ? 'نساء' : 'فتيات'}
