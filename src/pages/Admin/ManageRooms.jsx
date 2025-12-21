@@ -2,20 +2,22 @@ import { useState, useEffect } from 'react';
 import { dbService } from '../../services/db';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Trash2, Edit, Plus, MapPin, LayoutDashboard } from 'lucide-react';
+import { Save, Trash2, Edit, Plus, MapPin, LayoutDashboard, Layers } from 'lucide-react';
 import { BackButton } from '../../components/Navbar';
 import { toWesternNumerals } from '../../utils/dateUtils';
 import DataImportExportComponent from '../../components/DataImportExport';
+import { Navigate } from 'react-router-dom';
 
-export default function ManageRooms() {
+export default function ManageBaseData() {
   const { data, refreshData } = useData();
   const { currentUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('rooms'); // 'branches' or 'rooms'
+  // Super-admin only
+  if (currentUser?.role !== 'super-admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
-  // Unified State for simplicity (keys overlap is fine)
-  // Branch: { name, code }
-  // Room: { name, capacity, type, branchId }
+  const [activeTab, setActiveTab] = useState('branches'); // 'branches', 'rooms', 'levels'
   const [formData, setFormData] = useState({});
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,8 @@ export default function ManageRooms() {
   const handleImport = async (parsedData) => {
     setLoading(true);
     try {
-      const collection = activeTab === 'branches' ? 'branches' : 'rooms';
+      let collection = activeTab;
+      if (activeTab === 'levels') collection = 'levels';
       const validItems = [];
 
       if (activeTab === 'branches') {
@@ -35,23 +38,31 @@ export default function ManageRooms() {
             });
           }
         });
-      } else {
-        // Rooms
+      } else if (activeTab === 'rooms') {
         parsedData.forEach(row => {
-          // Find Branch
           let branchId = '';
           const bSearch = row['Branch'] || row['الفرع'];
           if (bSearch) {
             const b = data.branches?.find(br => br.name === bSearch);
             if (b) branchId = b.id;
           }
-
           if (row['Name'] || row['الاسم']) {
             validItems.push({
               name: row['Name'] || row['الاسم'],
               capacity: row['Capacity'] || row['السعة'] || '0',
               type: row['Type'] || row['النوع'] || 'classroom',
               branchId
+            });
+          }
+        });
+      } else if (activeTab === 'levels') {
+        parsedData.forEach(row => {
+          if (row['Title'] || row['الاسم']) {
+            validItems.push({
+              title: row['Title'] || row['الاسم'],
+              description: row['Description'] || row['الوصف'] || '',
+              category: row['Category'] || row['الفئة'] || 'children',
+              order: parseInt(row['Order'] || row['الترتيب'] || '1', 10)
             });
           }
         });
@@ -70,20 +81,17 @@ export default function ManageRooms() {
     }
   };
 
-  // Set default tab based on role? 
-  // Super-admins might start on Branches, others on Rooms.
-  // For now default Rooms is safe.
-
   const resetForm = () => {
     setSelectedId(null);
     if (activeTab === 'branches') {
       setFormData({ name: '', code: '' });
-    } else {
+    } else if (activeTab === 'rooms') {
       setFormData({ name: '', capacity: '', type: 'classroom', branchId: '' });
+    } else {
+      setFormData({ title: '', description: '', category: 'children', order: 1 });
     }
   };
 
-  // Switch tab resets form
   useEffect(() => {
     resetForm();
   }, [activeTab]);
@@ -91,12 +99,15 @@ export default function ManageRooms() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const collection = activeTab === 'branches' ? 'branches' : 'rooms';
+    const collection = activeTab;
 
     try {
       if (selectedId) {
         await dbService.update(collection, selectedId, formData);
       } else {
+        if (activeTab === 'levels' && !formData.order) {
+          formData.order = (data.levels?.length || 0) + 1;
+        }
         await dbService.add(collection, formData);
       }
       await refreshData();
@@ -111,9 +122,8 @@ export default function ManageRooms() {
 
   const handleDelete = async (id) => {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    const collection = activeTab === 'branches' ? 'branches' : 'rooms';
     try {
-      await dbService.remove(collection, id);
+      await dbService.remove(activeTab, id);
       await refreshData();
     } catch (error) {
       alert('فشل الحذف');
@@ -124,20 +134,26 @@ export default function ManageRooms() {
     setSelectedId(item.id);
     if (activeTab === 'branches') {
       setFormData({ name: item.name, code: item.code });
-    } else {
+    } else if (activeTab === 'rooms') {
       setFormData({
         name: item.name,
         capacity: item.capacity,
         type: item.type,
         branchId: item.branchId || ''
       });
+    } else {
+      setFormData({
+        title: item.title,
+        description: item.description || '',
+        category: item.category || 'children',
+        order: item.order || 1
+      });
     }
   };
 
-  // Renders
+  // ======== RENDER BRANCHES ========
   const renderBranches = () => (
     <div className="flex flex-col gap-6">
-      {/* Form */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h2 className="font-bold text-gray-700 flex items-center gap-2 mb-4">
           {selectedId ? <Edit size={20} /> : <Plus size={20} />}
@@ -168,19 +184,13 @@ export default function ManageRooms() {
             {selectedId && (
               <button type="button" onClick={resetForm} className="px-4 py-2 text-gray-500 border rounded-lg hover:bg-gray-50">إلغاء</button>
             )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2"
-            >
+            <button type="submit" disabled={loading} className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2">
               <Save size={18} />
               <span>{selectedId ? 'حفظ' : 'إضافة'}</span>
             </button>
           </div>
         </form>
       </div>
-
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-right">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
@@ -196,12 +206,8 @@ export default function ManageRooms() {
                 <td className="p-4 font-medium text-gray-800">{branch.name}</td>
                 <td className="p-4 text-gray-600 font-mono text-sm">{branch.code}</td>
                 <td className="p-4 flex gap-2">
-                  <button onClick={() => handleEdit(branch)} className="text-blue-500 hover:text-blue-700">
-                    <Edit size={18} />
-                  </button>
-                  <button onClick={() => handleDelete(branch.id)} className="text-red-500 hover:text-red-700">
-                    <Trash2 size={18} />
-                  </button>
+                  <button onClick={() => handleEdit(branch)} className="text-blue-500 hover:text-blue-700"><Edit size={18} /></button>
+                  <button onClick={() => handleDelete(branch.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
                 </td>
               </tr>
             ))}
@@ -211,9 +217,9 @@ export default function ManageRooms() {
     </div>
   );
 
+  // ======== RENDER ROOMS ========
   const renderRooms = () => (
     <div className="flex flex-col gap-6">
-      {/* Form */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h2 className="font-bold text-gray-700 flex items-center gap-2 mb-4">
           {selectedId ? <Edit size={20} /> : <Plus size={20} />}
@@ -222,68 +228,33 @@ export default function ManageRooms() {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="space-y-1">
             <label className="text-sm text-gray-500">اسم القاعة</label>
-            <input
-              required
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-              placeholder="مثال: القاعة الذهبية"
-              value={formData.name || ''}
-              onChange={(e) => setFormData({ ...formData, name: toWesternNumerals(e.target.value) })}
-            />
+            <input required className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" placeholder="مثال: القاعة الذهبية" value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: toWesternNumerals(e.target.value) })} />
           </div>
           <div className="space-y-1">
             <label className="text-sm text-gray-500">الفرع</label>
-            <select
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-              value={formData.branchId || ''}
-              onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-            >
+            <select className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" value={formData.branchId || ''} onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}>
               <option value="">-- اختر الفرع --</option>
-              {data.branches?.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
+              {data.branches?.map(b => (<option key={b.id} value={b.id}>{b.name}</option>))}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-sm text-gray-500">السعة الاستيعابية</label>
-            <input
-              type="number"
-              required
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none text-left dir-ltr"
-              placeholder="عدد الأشخاص"
-              value={formData.capacity || ''}
-              onChange={(e) => setFormData({ ...formData, capacity: toWesternNumerals(e.target.value) })}
-            />
+            <input type="number" required className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none text-left dir-ltr" placeholder="عدد الأشخاص" value={formData.capacity || ''} onChange={(e) => setFormData({ ...formData, capacity: toWesternNumerals(e.target.value) })} />
           </div>
           <div className="space-y-1">
             <label className="text-sm text-gray-500">النوع</label>
-            <select
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-              value={formData.type || 'classroom'}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            >
+            <select className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" value={formData.type || 'classroom'} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
               <option value="classroom">فصل دراسي</option>
               <option value="hall">قاعة محاضرات</option>
               <option value="lab">محترف</option>
             </select>
           </div>
-
           <div className="col-span-full flex justify-end gap-2 mt-2">
-            {selectedId && (
-              <button type="button" onClick={resetForm} className="px-4 py-2 text-gray-500 border rounded-lg hover:bg-gray-50">إلغاء</button>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2"
-            >
-              <Save size={18} />
-              <span>{selectedId ? 'حفظ' : 'إضافة القاعة'}</span>
-            </button>
+            {selectedId && (<button type="button" onClick={resetForm} className="px-4 py-2 text-gray-500 border rounded-lg hover:bg-gray-50">إلغاء</button>)}
+            <button type="submit" disabled={loading} className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2"><Save size={18} /><span>{selectedId ? 'حفظ' : 'إضافة القاعة'}</span></button>
           </div>
         </form>
       </div>
-
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-right">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
@@ -303,18 +274,10 @@ export default function ManageRooms() {
                   <td className="p-4 font-medium text-gray-800">{room.name}</td>
                   <td className="p-4 text-gray-600 text-sm">{branch?.name || '-'}</td>
                   <td className="p-4 text-gray-600 dir-ltr text-right">{room.capacity} <span className="text-xs">شخص</span></td>
-                  <td className="p-4">
-                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                      {room.type === 'classroom' ? 'فصل' : room.type === 'hall' ? 'قاعة' : 'محترف'}
-                    </span>
-                  </td>
+                  <td className="p-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">{room.type === 'classroom' ? 'فصل' : room.type === 'hall' ? 'قاعة' : 'محترف'}</span></td>
                   <td className="p-4 flex gap-2">
-                    <button onClick={() => handleEdit(room)} className="text-blue-500 hover:text-blue-700">
-                      <Edit size={18} />
-                    </button>
-                    <button onClick={() => handleDelete(room.id)} className="text-red-500 hover:text-red-700">
-                      <Trash2 size={18} />
-                    </button>
+                    <button onClick={() => handleEdit(room)} className="text-blue-500 hover:text-blue-700"><Edit size={18} /></button>
+                    <button onClick={() => handleDelete(room.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
                   </td>
                 </tr>
               );
@@ -325,17 +288,104 @@ export default function ManageRooms() {
     </div>
   );
 
+  // ======== RENDER LEVELS ========
+  const renderLevels = () => (
+    <div className="flex flex-col gap-6">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="font-bold text-gray-700 flex items-center gap-2 mb-4">
+          {selectedId ? <Edit size={20} /> : <Plus size={20} />}
+          <span>{selectedId ? 'تعديل مستوى' : 'إضافة مستوى جديد'}</span>
+        </h2>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">اسم المستوى</label>
+            <input required className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" placeholder="مثال: المستوى الثالث" value={formData.title || ''} onChange={(e) => setFormData({ ...formData, title: toWesternNumerals(e.target.value) })} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">الفئة</label>
+            <select className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" value={formData.category || 'children'} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+              <option value="women">النساء</option>
+              <option value="girls">الفتيات</option>
+              <option value="children">الأطفال</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">الترتيب</label>
+            <input type="number" min="1" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right" placeholder="1" value={formData.order || ''} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value, 10) || 1 })} />
+          </div>
+          <div className="space-y-1 md:col-span-2 lg:col-span-1">
+            <label className="text-sm text-gray-500">الوصف</label>
+            <input className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" placeholder="وصف قصير (اختياري)" value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: toWesternNumerals(e.target.value) })} />
+          </div>
+          <div className="col-span-full flex justify-end gap-2 mt-2">
+            {selectedId && (<button type="button" onClick={resetForm} className="px-4 py-2 text-gray-500 border rounded-lg hover:bg-gray-50">إلغاء</button>)}
+            <button type="submit" disabled={loading} className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2"><Save size={18} /><span>{selectedId ? 'حفظ' : 'إضافة المستوى'}</span></button>
+          </div>
+        </form>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-right">
+          <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
+            <tr>
+              <th className="p-4">اسم المستوى</th>
+              <th className="p-4">الفئة</th>
+              <th className="p-4">الترتيب</th>
+              <th className="p-4">الوصف</th>
+              <th className="p-4">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {[...(data.levels || [])].sort((a, b) => {
+              const categoryOrder = { women: 1, girls: 2, children: 3 };
+              const catA = categoryOrder[a.category] || 99;
+              const catB = categoryOrder[b.category] || 99;
+              if (catA !== catB) return catA - catB;
+              return (a.order || 0) - (b.order || 0);
+            }).map((level) => (
+              <tr key={level.id} className="hover:bg-gray-50 transition-colors">
+                <td className="p-4 font-medium text-gray-800">{level.title}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded text-xs ${level.category === 'women' ? 'bg-pink-100 text-pink-700' : level.category === 'girls' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {level.category === 'women' ? 'النساء' : level.category === 'girls' ? 'الفتيات' : 'الأطفال'}
+                  </span>
+                </td>
+                <td className="p-4 text-gray-600 dir-ltr text-right">{level.order || '-'}</td>
+                <td className="p-4 text-gray-500 text-sm">{level.description || '-'}</td>
+                <td className="p-4 flex gap-2">
+                  <button onClick={() => handleEdit(level)} className="text-blue-500 hover:text-blue-700"><Edit size={18} /></button>
+                  <button onClick={() => handleDelete(level.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const getImportExportProps = () => {
+    if (activeTab === 'branches') {
+      return { data: data.branches || [], fileName: 'branches.csv', headerMap: { 'name': 'الاسم', 'code': 'الرمز' }, templateHeaders: ['الاسم', 'الرمز'] };
+    } else if (activeTab === 'rooms') {
+      return { data: data.rooms || [], fileName: 'rooms.csv', headerMap: { 'name': 'الاسم', 'capacity': 'السعة', 'type': 'النوع' }, templateHeaders: ['الاسم', 'السعة', 'النوع', 'الفرع'] };
+    } else {
+      return { data: data.levels || [], fileName: 'levels.csv', headerMap: { 'title': 'الاسم', 'category': 'الفئة', 'order': 'الترتيب', 'description': 'الوصف' }, templateHeaders: ['الاسم', 'الفئة', 'الترتيب', 'الوصف'] };
+    }
+  };
+
+  const importExportProps = getImportExportProps();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">إدارة المرافق (الفروع والقاعات)</h1>
+        <h1 className="text-2xl font-bold text-gray-800">إدارة البيانات الأساسية</h1>
         <div className="flex items-center gap-2">
           <DataImportExportComponent
-            data={activeTab === 'branches' ? (data.branches || []) : (data.rooms || [])}
-            fileName={activeTab === 'branches' ? "branches.csv" : "rooms.csv"}
+            data={importExportProps.data}
+            fileName={importExportProps.fileName}
             onImport={handleImport}
-            headerMap={activeTab === 'branches' ? { 'name': 'الاسم', 'code': 'الرمز' } : { 'name': 'الاسم', 'capacity': 'السعة', 'type': 'النوع' }}
-            templateHeaders={activeTab === 'branches' ? ['\u0627\u0644\u0627\u0633\u0645', '\u0627\u0644\u0631\u0645\u0632'] : ['\u0627\u0644\u0627\u0633\u0645', '\u0627\u0644\u0633\u0639\u0629', '\u0627\u0644\u0646\u0648\u0639', '\u0627\u0644\u0641\u0631\u0639']}
+            headerMap={importExportProps.headerMap}
+            templateHeaders={importExportProps.templateHeaders}
           />
           <BackButton />
         </div>
@@ -343,23 +393,18 @@ export default function ManageRooms() {
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('branches')}
-          className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'branches' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}
-        >
-          <MapPin size={20} />
-          <span>الفروع</span>
+        <button onClick={() => setActiveTab('branches')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'branches' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <MapPin size={20} /><span>الفروع</span>
         </button>
-        <button
-          onClick={() => setActiveTab('rooms')}
-          className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'rooms' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}
-        >
-          <LayoutDashboard size={20} />
-          <span>القاعات</span>
+        <button onClick={() => setActiveTab('rooms')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'rooms' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <LayoutDashboard size={20} /><span>القاعات</span>
+        </button>
+        <button onClick={() => setActiveTab('levels')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'levels' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <Layers size={20} /><span>المستويات</span>
         </button>
       </div>
 
-      {activeTab === 'branches' ? renderBranches() : renderRooms()}
+      {activeTab === 'branches' ? renderBranches() : activeTab === 'rooms' ? renderRooms() : renderLevels()}
     </div>
   );
 }

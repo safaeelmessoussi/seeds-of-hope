@@ -3,20 +3,21 @@ import { StrictMode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Public/Home';
-import LevelContent from './pages/Public/LevelContent'; // Import new page
+import Levels from './pages/Public/Levels';
+import LevelContent from './pages/Public/LevelContent';
 import ManageCalendar from './pages/Admin/ManageCalendar';
-import ManageLevels from './pages/Admin/ManageLevels';
-import ManageRooms from './pages/Admin/ManageRooms';
+import ManageBaseData from './pages/Admin/ManageRooms';
 import ManageTeachers from './pages/Admin/ManageTeachers';
 import ManageContent from './pages/Admin/ManageContent';
 import ManageAdmins from './pages/Admin/ManageAdmins';
 import ManageStudents from './pages/Admin/ManageStudents';
+import ManageAttendance from './pages/Admin/ManageAttendance';
 import GradeEntry from './pages/Admin/GradeEntry';
 import Trash from './pages/Admin/Trash';
 import { useAuth } from './context/AuthContext';
 
 import PublicCalendar from './pages/Public/Calendar';
-import Login from "./pages/Public/Login"; // Changed path for Login
+import Login from "./pages/Public/Login";
 import AdminDashboard from './pages/Admin/AdminDashboard';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/levels" element={<Levels />} />
           <Route path="/level/:id" element={<LevelContent />} />
           <Route path="/calendar" element={<PublicCalendar />} />
 
@@ -45,12 +47,13 @@ function App() {
                 <Routes>
                   <Route index element={<AdminDashboard />} />
                   <Route path="calendar" element={<ManageCalendar />} />
-                  <Route path="levels" element={<ManageLevels />} />
-                  <Route path="rooms" element={<ManageRooms />} />
+                  <Route path="base-data" element={<ManageBaseData />} />
+                  <Route path="rooms" element={<ManageBaseData />} />
                   <Route path="teachers" element={<ManageTeachers />} />
                   <Route path="content" element={<ManageContent />} />
                   <Route path="students" element={<ManageStudents />} />
                   <Route path="admins" element={<ManageAdmins />} />
+                  <Route path="attendance" element={<ManageAttendance />} />
                   <Route path="grades" element={<GradeEntry />} />
                   <Route path="trash" element={<Trash />} />
                   <Route path="*" element={<div className="text-center p-10">صفحة قيد التطوير</div>} />

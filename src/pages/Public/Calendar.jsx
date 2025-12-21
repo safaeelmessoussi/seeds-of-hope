@@ -4,8 +4,14 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { localizer, calendarMessages, formatDualMonthHeader, getHijriParts } from '../../utils/calendarUtils';
 import { useData } from '../../context/DataContext';
 import CustomToolbar from '../../components/CalendarToolbar';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import EventModal from '../../components/EventModal';
+
+// Level colors for events
+const LEVEL_COLORS = [
+    '#8DC63F', '#F39200', '#8B5CF6', '#EC4899', '#06B6D4',
+    '#EF4444', '#10B981', '#F59E0B', '#6366F1', '#84CC16'
+];
 
 // Month View Date Header (for day cells)
 const CustomDateHeader = ({ date, label }) => {
@@ -18,7 +24,7 @@ const CustomDateHeader = ({ date, label }) => {
     );
 };
 
-// Week View Header (for column headers) - [Hijri day] [Day name] [Gregorian day]
+// Week View Header (for column headers)
 const CustomWeekHeader = ({ date, label }) => {
     const { day: hijriDay } = getHijriParts(date);
     const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -37,60 +43,136 @@ const CustomWeekHeader = ({ date, label }) => {
 export default function Calendar() {
     const { data } = useData();
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const [selectedLevelFilter, setSelectedLevelFilter] = useState('');
 
     const handleSelectEvent = (event) => {
         setSelectedEvent(event);
     };
 
-    // Enrich events
-    const allEvents = (data.events || []).map(event => {
-        const teacher = data.teachers?.find(t => t.id === event.teacherId);
-        const room = data.rooms?.find(r => r.id === event.roomId);
+    // Get women's levels only, sorted by order
+    const womenLevels = useMemo(() => {
+        return (data.levels || [])
+            .filter(l => l.category === 'women')
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    }, [data.levels]);
 
-        return {
-            ...event,
-            start: new Date(event.start),
-            end: new Date(event.end),
-            teacherName: teacher?.name,
-            roomName: room?.name
-        };
-    });
+    // Build level color map
+    const levelColorMap = useMemo(() => {
+        const map = {};
+        womenLevels.forEach((level, idx) => {
+            map[level.id] = LEVEL_COLORS[idx % LEVEL_COLORS.length];
+        });
+        return map;
+    }, [womenLevels]);
+
+    // Enrich events with colors
+    const allEvents = useMemo(() => {
+        return (data.events || []).map(event => {
+            const teacher = data.teachers?.find(t => t.id === event.teacherId);
+            const room = data.rooms?.find(r => r.id === event.roomId);
+            const level = data.levels?.find(l => l.id === event.levelId);
+            const branch = data.branches?.find(b => b.id === event.branchId);
+
+            return {
+                ...event,
+                start: new Date(event.start),
+                end: new Date(event.end),
+                teacherName: teacher?.name,
+                roomName: room?.name,
+                levelName: level?.title,
+                branchName: branch?.name,
+                levelColor: event.levelId ? levelColorMap[event.levelId] : '#6B7280'
+            };
+        });
+    }, [data.events, data.teachers, data.rooms, data.levels, data.branches, levelColorMap]);
+
+    // Filter events by selected level
+    const filteredEvents = useMemo(() => {
+        if (!selectedLevelFilter) return allEvents;
+        return allEvents.filter(e => e.levelId === selectedLevelFilter);
+    }, [allEvents, selectedLevelFilter]);
 
     // Group events by Branch
-    // 1. Specific Branches
-    // 2. No Branch (General)
     const branches = data.branches || [];
 
     const calendarsToRender = [];
 
     // Add Branch Calendars
     branches.forEach(branch => {
-        const branchEvents = allEvents.filter(e => e.branchId === branch.id);
-        if (branchEvents.length > 0 || true) { // Always show branch calendars even if empty? User said "if we have two branches, we show two calendars".
-            calendarsToRender.push({
-                id: branch.id,
-                title: `جدول ${branch.name}`,
-                events: branchEvents
-            });
-        }
+        const branchEvents = filteredEvents.filter(e => e.branchId === branch.id);
+        calendarsToRender.push({
+            id: branch.id,
+            title: `جدول ${branch.name}`,
+            events: branchEvents
+        });
     });
 
-    // Add General/Global events removed as per request
-    const generalEvents = allEvents.filter(e => !e.branchId);
-    /* if (generalEvents.length > 0) {
-        calendarsToRender.push({
-            id: 'general',
-            title: 'الجدول العام',
-            events: generalEvents
-        });
-    } */
+    // Handle level click
+    const handleLevelClick = (levelId) => {
+        if (selectedLevelFilter === levelId) {
+            setSelectedLevelFilter(''); // Toggle off
+        } else {
+            setSelectedLevelFilter(levelId);
+        }
+    };
 
     return (
-        <div className="flex flex-col gap-12">
+        <div className="flex flex-col gap-8">
+            {/* Clickable Level Filter */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600 ml-2">المستويات:</span>
+
+                    {/* All levels button */}
+                    <button
+                        onClick={() => setSelectedLevelFilter('')}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!selectedLevelFilter
+                                ? 'bg-gray-800 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        الكل
+                    </button>
+
+                    {/* Women's levels */}
+                    {womenLevels.map((level, idx) => {
+                        const color = LEVEL_COLORS[idx % LEVEL_COLORS.length];
+                        const isSelected = selectedLevelFilter === level.id;
+
+                        return (
+                            <button
+                                key={level.id}
+                                onClick={() => handleLevelClick(level.id)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${isSelected
+                                        ? 'text-white shadow-md scale-105'
+                                        : 'text-gray-700 hover:scale-105'
+                                    }`}
+                                style={{
+                                    backgroundColor: isSelected ? color : `${color}20`,
+                                    borderWidth: '2px',
+                                    borderColor: color
+                                }}
+                            >
+                                <span
+                                    className="w-2.5 h-2.5 rounded-full"
+                                    style={{ backgroundColor: color }}
+                                />
+                                {level.title}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
             {calendarsToRender.map(cal => (
                 <div key={cal.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[850px] flex flex-col gap-4">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4 border-gray-100">
+                    <h1 className="text-2xl font-bold text-gray-800 mb-2 border-b pb-4 border-gray-100">
                         {cal.title}
+                        {selectedLevelFilter && (
+                            <span className="text-sm font-normal text-gray-500 mr-3">
+                                ({womenLevels.find(l => l.id === selectedLevelFilter)?.title})
+                            </span>
+                        )}
                     </h1>
 
                     <BigCalendar
@@ -116,7 +198,6 @@ export default function Calendar() {
                         formats={{
                             monthHeaderFormat: (date, culture, loc) => formatDualMonthHeader(date, loc),
                             weekdayFormat: (date, culture, loc) => {
-                                // For Month View Header: "الاثنين"
                                 const d = date.getDay();
                                 const names = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
                                 return names[d];
@@ -129,8 +210,9 @@ export default function Calendar() {
                         }}
                         eventPropGetter={(event) => ({
                             style: {
-                                backgroundColor: '#8DC63F',
-                                color: 'white',
+                                backgroundColor: event.levelColor || '#6B7280',
+                                borderColor: event.levelColor || '#6B7280',
+                                color: '#fff'
                             }
                         })}
                     />

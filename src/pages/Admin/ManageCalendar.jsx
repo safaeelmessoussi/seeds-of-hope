@@ -48,30 +48,48 @@ export default function ManageCalendar() {
     const [formData, setFormData] = useState({
         title: '',
         type: 'class',
-        start: '',
-        end: '',
+        eventDate: '',
+        startTime: '',
+        endTime: '',
         teacherId: '',
         roomId: '',
-        branchId: '', // Add Initial State
-        recurrence: 'none', // none, daily, weekly, biweekly, yearly
+        branchId: '',
+        levelId: '',  // New: for level-specific events
+        recurrence: 'none',
         recurrenceEnd: '',
     });
 
     // Series Update Mode
     const [updateMode, setUpdateMode] = useState('single'); // single, future, all
 
+    // Level Filter for calendar
+    const [selectedLevelFilter, setSelectedLevelFilter] = useState('');
+
+    // Level colors for events
+    const levelColors = [
+        '#8DC63F', '#F39200', '#8B5CF6', '#EC4899', '#06B6D4',
+        '#EF4444', '#10B981', '#F59E0B', '#6366F1', '#84CC16'
+    ];
+
     useEffect(() => {
         if (data.events) {
+            // Build level color map
+            const levelColorMap = {};
+            (data.levels || []).forEach((level, idx) => {
+                levelColorMap[level.id] = levelColors[idx % levelColors.length];
+            });
+
             setEvents(
                 data.events.map(ev => ({
                     ...ev,
                     start: new Date(ev.start),
                     end: new Date(ev.end),
-                    isRecurring: !!ev.seriesId
+                    isRecurring: !!ev.seriesId,
+                    levelColor: ev.levelId ? levelColorMap[ev.levelId] : '#6B7280'
                 }))
             );
         }
-    }, [data.events]);
+    }, [data.events, data.levels]);
 
     const handleSelectSlot = ({ start, end }) => {
         setSelectedEvent(null);
@@ -83,23 +101,25 @@ export default function ManageCalendar() {
             endDate.setHours(endDate.getHours() + 1);
         }
 
-        // Convert to datetime-local string format safe for Inputs
-        // Note: This needs to handle timezone offset if strict ISO used, 
-        // but for local inputs simplest is manual formatting or a library helper.
-        // Basic approach:
-        const toLocalISO = (d) => {
-            const offset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+        // Format date as YYYY-MM-DD
+        const toDateStr = (d) => d.toISOString().slice(0, 10);
+        // Format time as HH:MM
+        const toTimeStr = (d) => {
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
         };
 
         setFormData({
             title: '',
             type: 'class',
-            start: toLocalISO(startDate),
-            end: toLocalISO(endDate),
+            eventDate: toDateStr(startDate),
+            startTime: toTimeStr(startDate),
+            endTime: toTimeStr(endDate),
             teacherId: '',
             roomId: '',
             branchId: '',
+            levelId: '',
             recurrence: 'none',
             recurrenceEnd: ''
         });
@@ -107,21 +127,28 @@ export default function ManageCalendar() {
 
     const handleSelectEvent = (event) => {
         setSelectedEvent(event);
-        const toLocalISO = (d) => {
-            const offset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+        const startD = new Date(event.start);
+        const endD = new Date(event.end);
+
+        const toDateStr = (d) => d.toISOString().slice(0, 10);
+        const toTimeStr = (d) => {
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
         };
 
         setFormData({
             title: event.title,
             type: event.type || 'class',
-            start: toLocalISO(new Date(event.start)),
-            end: toLocalISO(new Date(event.end)),
+            eventDate: toDateStr(startD),
+            startTime: toTimeStr(startD),
+            endTime: toTimeStr(endD),
             teacherId: event.teacherId || '',
             roomId: event.roomId || '',
             branchId: event.branchId || '',
-            recurrence: 'none', // Reset recurrence for edit unless logic allows changing series
-            recurrenceEnd: ''
+            levelId: event.levelId || '',
+            recurrence: event.recurrence || 'none',
+            recurrenceEnd: event.recurrenceEnd || ''
         });
     };
 
@@ -147,14 +174,19 @@ export default function ManageCalendar() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Combine date and times into ISO strings
+        const startDateTime = new Date(`${formData.eventDate}T${formData.startTime}:00`);
+        const endDateTime = new Date(`${formData.eventDate}T${formData.endTime}:00`);
+
         const eventPayload = {
             title: formData.title,
             type: formData.type,
-            start: new Date(formData.start).toISOString(),
-            end: new Date(formData.end).toISOString(),
+            start: startDateTime.toISOString(),
+            end: endDateTime.toISOString(),
             teacherId: formData.teacherId,
             roomId: formData.roomId,
-            branchId: formData.branchId // Add Branch
+            branchId: formData.branchId,
+            levelId: formData.levelId  // Add level
         };
 
         try {
@@ -307,11 +339,71 @@ export default function ManageCalendar() {
         }
     };
 
+    // Get women's levels only, sorted by order
+    const womenLevels = (data.levels || [])
+        .filter(l => l.category === 'women')
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Handle level button click
+    const handleLevelClick = (levelId) => {
+        if (selectedLevelFilter === levelId) {
+            setSelectedLevelFilter(''); // Toggle off
+        } else {
+            setSelectedLevelFilter(levelId);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-800">إدارة الجدول الزمني</h1>
                 <BackButton />
+            </div>
+
+            {/* Clickable Level Filter */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600 ml-2">المستويات:</span>
+
+                    {/* All levels button */}
+                    <button
+                        onClick={() => setSelectedLevelFilter('')}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!selectedLevelFilter
+                                ? 'bg-gray-800 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        الكل
+                    </button>
+
+                    {/* Women's levels */}
+                    {womenLevels.map((level, idx) => {
+                        const color = levelColors[idx % levelColors.length];
+                        const isSelected = selectedLevelFilter === level.id;
+
+                        return (
+                            <button
+                                key={level.id}
+                                onClick={() => handleLevelClick(level.id)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${isSelected
+                                        ? 'text-white shadow-md scale-105'
+                                        : 'text-gray-700 hover:scale-105'
+                                    }`}
+                                style={{
+                                    backgroundColor: isSelected ? color : `${color}20`,
+                                    borderWidth: '2px',
+                                    borderColor: color
+                                }}
+                            >
+                                <span
+                                    className="w-2.5 h-2.5 rounded-full"
+                                    style={{ backgroundColor: color }}
+                                />
+                                {level.title}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Editor Form */}
@@ -344,10 +436,30 @@ export default function ManageCalendar() {
                         <select
                             className="w-full border rounded-lg p-2"
                             value={formData.branchId || ''}
-                            onChange={e => setFormData({ ...formData, branchId: e.target.value })}
+                            onChange={e => setFormData({ ...formData, branchId: e.target.value, roomId: '' })}
                         >
                             <option value="">عام / مشترك</option>
                             {data.branches?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm text-gray-500">المستوى</label>
+                        <select
+                            className="w-full border rounded-lg p-2"
+                            value={formData.levelId || ''}
+                            onChange={e => setFormData({ ...formData, levelId: e.target.value })}
+                        >
+                            <option value="">عام (لكل الطلاب)</option>
+                            {[...(data.levels || [])]
+                                .sort((a, b) => {
+                                    const categoryOrder = { women: 1, girls: 2, children: 3 };
+                                    const catA = categoryOrder[a.category] || 99;
+                                    const catB = categoryOrder[b.category] || 99;
+                                    if (catA !== catB) return catA - catB;
+                                    return (a.order || 0) - (b.order || 0);
+                                })
+                                .map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
                         </select>
                     </div>
 
@@ -371,7 +483,16 @@ export default function ManageCalendar() {
                             onChange={e => setFormData({ ...formData, roomId: e.target.value })}
                         >
                             <option value="">اختيار قاعة...</option>
-                            {data.rooms?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            {(data.rooms || [])
+                                .filter(r => !formData.branchId || r.branchId === formData.branchId)
+                                .map(r => {
+                                    const branch = data.branches?.find(b => b.id === r.branchId);
+                                    return (
+                                        <option key={r.id} value={r.id}>
+                                            {r.name}{branch ? ` (فرع ${branch.name})` : ''}
+                                        </option>
+                                    );
+                                })}
                         </select>
                     </div>
 
@@ -387,29 +508,43 @@ export default function ManageCalendar() {
                             <option value="class">حصة دراسية</option>
                             <option value="activity">نشاط</option>
                             <option value="meeting">اجتماع</option>
+                            <option value="exam">امتحان</option>
+                            <option value="vacation">عطلة</option>
                         </select>
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-sm text-gray-500">من</label>
+                        <label className="text-sm text-gray-500">التاريخ</label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             className="w-full border rounded-lg p-2 dir-ltr text-right"
-                            value={formData.start}
-                            onChange={e => setFormData({ ...formData, start: e.target.value })}
+                            value={formData.eventDate}
+                            onChange={e => setFormData({ ...formData, eventDate: e.target.value })}
                             required
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-sm text-gray-500">إلى</label>
-                        <input
-                            type="datetime-local"
-                            className="w-full border rounded-lg p-2 dir-ltr text-right"
-                            value={formData.end}
-                            onChange={e => setFormData({ ...formData, end: e.target.value })}
-                            required
-                        />
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                            <label className="text-sm text-gray-500">من</label>
+                            <input
+                                type="time"
+                                className="w-full border rounded-lg p-2 dir-ltr text-right"
+                                value={formData.startTime}
+                                onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm text-gray-500">إلى</label>
+                            <input
+                                type="time"
+                                className="w-full border rounded-lg p-2 dir-ltr text-right"
+                                value={formData.endTime}
+                                onChange={e => setFormData({ ...formData, endTime: e.target.value })}
+                                required
+                            />
+                        </div>
                     </div>
 
                     {/* Recurrence Options */}
@@ -488,19 +623,26 @@ export default function ManageCalendar() {
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[800px] flex flex-col gap-4">
                 <DnDCalendar
                     localizer={localizer}
-                    events={events}
+                    events={selectedLevelFilter ? events.filter(e => e.levelId === selectedLevelFilter) : events}
                     startAccessor="start"
                     endAccessor="end"
                     style={{ height: '100%' }}
                     messages={calendarMessages}
                     rtl={true}
                     culture='ar'
-                    views={['month', 'week', 'agenda']} // Back to array, simpler
+                    views={['month', 'week', 'agenda']}
                     onSelectSlot={handleSelectSlot}
                     onSelectEvent={handleSelectEvent}
                     onEventDrop={handleEventDrop}
                     selectable
                     resizable
+                    eventPropGetter={(event) => ({
+                        style: {
+                            backgroundColor: event.levelColor || '#6B7280',
+                            borderColor: event.levelColor || '#6B7280',
+                            color: '#fff'
+                        }
+                    })}
                     components={{
                         toolbar: CustomToolbar,
                         month: {
@@ -524,12 +666,6 @@ export default function ManageCalendar() {
                             return `${names[d]} ${date.getDate()} ${loc.format(date, 'MMM', culture)}`;
                         }
                     }}
-                    eventPropGetter={(event) => ({
-                        style: {
-                            backgroundColor: event.id === selectedEvent?.id ? '#F39200' : '#8DC63F',
-                            color: 'white',
-                        }
-                    })}
                 />
             </div>
 

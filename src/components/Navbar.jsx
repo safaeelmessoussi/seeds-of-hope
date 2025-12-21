@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import logo from '../assets/logo.jpg';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Calendar, LayoutDashboard, Home, ArrowRight, User, Menu, X } from 'lucide-react';
+import { LogOut, Calendar, LayoutDashboard, Home, ArrowRight, User, Menu, X, BookOpen } from 'lucide-react';
 
 // Reusable Back Button for sub-pages
 export const BackButton = () => {
@@ -75,6 +75,9 @@ const Navbar = () => {
                     <div className="hidden md:flex items-center gap-8 font-bold text-gray-700">
                         <Link to="/" className={`flex items-center gap-1 ${location.pathname === '/' ? 'text-primary-green' : 'hover:text-primary-green'}`}>
                             <Home className="w-5 h-5" /> الرئيسية
+                        </Link>
+                        <Link to="/levels" className={`flex items-center gap-1 ${location.pathname === '/levels' ? 'text-primary-green' : 'hover:text-primary-green'}`}>
+                            <BookOpen className="w-5 h-5" /> المحتوى التعليمي
                         </Link>
                         <Link to="/calendar" className={`flex items-center gap-1 ${location.pathname === '/calendar' ? 'text-primary-green' : 'hover:text-primary-green'}`}>
                             <Calendar className="w-5 h-5" /> الجدول الزمني
@@ -152,6 +155,9 @@ const Navbar = () => {
                     <div className="flex flex-col p-4 gap-2">
                         <Link to="/" onClick={toggleMenu} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
                             <Home className="w-5 h-5 text-gray-500" /> الرئيسية
+                        </Link>
+                        <Link to="/levels" onClick={toggleMenu} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
+                            <BookOpen className="w-5 h-5 text-gray-500" /> المحتوى التعليمي
                         </Link>
                         <Link to="/calendar" onClick={toggleMenu} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
                             <Calendar className="w-5 h-5 text-gray-500" /> الجدول الزمني

@@ -1,4 +1,4 @@
-import { X, Clock, MapPin, User, Tag } from 'lucide-react';
+import { X, Clock, MapPin, User, Tag, Layers, GitBranch } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 
 export default function EventModal({ event, onClose }) {
@@ -26,6 +26,22 @@ export default function EventModal({ event, onClose }) {
                     </div>
 
                     <div className="flex items-center gap-3 text-gray-600">
+                        <Layers className="text-indigo-500" size={20} />
+                        <div className="flex flex-col">
+                            <span className="text-sm text-gray-400">المستوى</span>
+                            <span className="font-medium">{event.levelName || 'عام (لكل الطلاب)'}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600">
+                        <GitBranch className="text-teal-500" size={20} />
+                        <div className="flex flex-col">
+                            <span className="text-sm text-gray-400">الفرع</span>
+                            <span className="font-medium">{event.branchName || 'عام / مشترك'}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600">
                         <User className="text-orange-500" size={20} />
                         <div className="flex flex-col">
                             <span className="text-sm text-gray-400">المؤطرة</span>
@@ -45,7 +61,13 @@ export default function EventModal({ event, onClose }) {
                         <Tag className="text-purple-500" size={20} />
                         <div className="flex flex-col">
                             <span className="text-sm text-gray-400">نوع النشاط</span>
-                            <span className="font-medium">{event.type || 'عام'}</span>
+                            <span className="font-medium">{
+                                event.type === 'class' ? 'حصة دراسية' :
+                                    event.type === 'activity' ? 'نشاط' :
+                                        event.type === 'meeting' ? 'اجتماع' :
+                                            event.type === 'exam' ? 'امتحان' :
+                                                event.type === 'vacation' ? 'عطلة' : 'عام'
+                            }</span>
                         </div>
                     </div>
                 </div>

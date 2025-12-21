@@ -9,7 +9,7 @@ export function useData() {
 }
 
 // Collections to sync
-const COLLECTIONS = ['levels', 'rooms', 'teachers', 'contents', 'events', 'branches', 'users', 'students', 'grades'];
+const COLLECTIONS = ['levels', 'rooms', 'teachers', 'contents', 'events', 'branches', 'users', 'students', 'grades', 'attendance'];
 
 export function DataProvider({ children }) {
     const { currentUser } = useAuth();
@@ -22,7 +22,8 @@ export function DataProvider({ children }) {
         branches: [],
         users: [],
         students: [],
-        grades: []
+        grades: [],
+        attendance: []
     });
     const [loading, setLoading] = useState(true);
 
