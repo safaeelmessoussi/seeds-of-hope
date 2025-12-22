@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Home from './pages/Public/Home';
 import Levels from './pages/Public/Levels';
 import LevelContent from './pages/Public/LevelContent';
+import Programs from './pages/Public/Programs';
 import ManageCalendar from './pages/Admin/ManageCalendar';
 import ManageBaseData from './pages/Admin/ManageRooms';
 import ManageTeachers from './pages/Admin/ManageTeachers';
@@ -31,6 +32,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/levels" element={<Levels />} />
           <Route path="/level/:id" element={<LevelContent />} />
+          <Route path="/programs" element={<Programs />} />
           <Route path="/calendar" element={<PublicCalendar />} />
 
           {/* Auth Routes */}

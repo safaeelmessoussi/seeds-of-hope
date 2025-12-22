@@ -1,4 +1,5 @@
-import { X, Clock, MapPin, User, Tag, Layers, GitBranch } from 'lucide-react';
+import { X, Clock, MapPin, User, Tag, Layers, GitBranch, Link as LinkIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { formatDate } from '../utils/dateUtils';
 
 export default function EventModal({ event, onClose }) {
@@ -70,6 +71,22 @@ export default function EventModal({ event, onClose }) {
                             }</span>
                         </div>
                     </div>
+
+                    {/* Content Link - shows if event has linked content */}
+                    {event.contentId && event.levelId && (
+                        <Link
+                            to={`/level/${event.levelId}?highlight=${event.contentId}`}
+                            onClick={onClose}
+                            className="flex items-center gap-3 p-3 bg-primary-green/10 rounded-lg border border-primary-green/30 hover:bg-primary-green/20 transition-colors"
+                        >
+                            <LinkIcon className="text-primary-green" size={20} />
+                            <div className="flex flex-col flex-1">
+                                <span className="text-sm text-primary-green/70">محتوى مرتبط</span>
+                                <span className="font-medium text-primary-green">{event.contentName || 'عرض المحتوى'}</span>
+                            </div>
+                            <span className="text-primary-green text-sm">←</span>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">

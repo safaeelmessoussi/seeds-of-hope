@@ -2,7 +2,7 @@ import DataImportExportComponent from '../../components/DataImportExport';
 import { useState, useEffect } from 'react';
 import { dbService } from '../../services/db';
 import { useData } from '../../context/DataContext';
-import { Save, Trash2, Edit, User, GraduationCap, Phone, MapPin, Briefcase, Users, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Trash2, Edit, User, GraduationCap, Phone, MapPin, Briefcase, Users, LogOut, ChevronDown, ChevronUp, Search, CreditCard } from 'lucide-react';
 import { BackButton } from '../../components/Navbar';
 
 export default function ManageStudents() {
@@ -13,24 +13,29 @@ export default function ManageStudents() {
         category: 'children',
         branchId: '',
         levelId: '',
-        // New fields from xlsx
+        // Common fields
         schoolLevel: '',
         parentJob: '',
         address: '',
         phone: '',
-        groupName: '',
         socialStatus: '',
         hasLeft: false,
-        leaveReason: ''
+        leaveReason: '',
+        // Women-specific fields
+        idCardNumber: '',
+        occupation: '',
+        educationLevel: ''
     });
     const [selectedId, setSelectedId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [expandedRow, setExpandedRow] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleSelectAll = (e) => {
+        const ids = filteredStudents.map(s => s.id);
         if (e.target.checked) {
-            setSelectedIds(students.map(s => s.id));
+            setSelectedIds(ids);
         } else {
             setSelectedIds([]);
         }
@@ -60,6 +65,19 @@ export default function ManageStudents() {
     useEffect(() => {
         if (data.students) setStudents(data.students);
     }, [data.students]);
+
+    // Filter and sort students
+    const filteredStudents = students
+        .filter(s => {
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase();
+            return (s.name || '').toLowerCase().includes(query);
+        })
+        .sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'ar');
+        });
 
     const handleImport = async (parsedData) => {
         if (!confirm(`سيتم استيراد ${parsedData.length} طالب. هل أنت متأكد؟`)) return;
@@ -102,7 +120,6 @@ export default function ManageStudents() {
                     parentJob: row['مهنة ولي الامر'] || row['Parent Job'] || '',
                     address: row['العنوان'] || row['Address'] || '',
                     phone: String(row['رقم الهاتف'] || row['Phone'] || ''),
-                    groupName: row['المجموعة'] || row['Group'] || row['اسم المستوى'] || '',
                     socialStatus: row['الحالة الاجتماعية'] || row['اللجة'] || row['Social Status'] || '',
                     hasLeft: (row['غادر'] === 'نعم' || row['Left'] === 'yes') ? true : false,
                     leaveReason: row['سبب المغادرة'] || row['Leave Reason'] || '',
@@ -164,10 +181,13 @@ export default function ManageStudents() {
             parentJob: student.parentJob || '',
             address: student.address || '',
             phone: student.phone || '',
-            groupName: student.groupName || '',
             socialStatus: student.socialStatus || '',
             hasLeft: student.hasLeft || false,
-            leaveReason: student.leaveReason || ''
+            leaveReason: student.leaveReason || '',
+            // Women-specific fields
+            idCardNumber: student.idCardNumber || '',
+            occupation: student.occupation || '',
+            educationLevel: student.educationLevel || ''
         });
     };
 
@@ -176,7 +196,8 @@ export default function ManageStudents() {
         setFormData({
             name: '', category: 'children', branchId: '', levelId: '',
             schoolLevel: '', parentJob: '', address: '', phone: '',
-            groupName: '', socialStatus: '', hasLeft: false, leaveReason: ''
+            socialStatus: '', hasLeft: false, leaveReason: '',
+            idCardNumber: '', occupation: '', educationLevel: ''
         });
     };
 
@@ -208,9 +229,8 @@ export default function ManageStudents() {
                             'name': 'الاسم',
                             'category': 'الفئة',
                             'phone': 'رقم الهاتف',
-                            'groupName': 'المجموعة',
                         }}
-                        templateHeaders={['الاسم الكامل', 'الفئة', 'الفرع', 'المستوى', 'المستوى الدراسي', 'مهنة ولي الامر', 'العنوان', 'رقم الهاتف', 'المجموعة', 'الحالة الاجتماعية']}
+                        templateHeaders={['الاسم الكامل', 'الفئة', 'الفرع', 'المستوى', 'المستوى الدراسي', 'مهنة ولي الامر', 'العنوان', 'رقم الهاتف', 'الحالة الاجتماعية']}
                     />
                     <BackButton />
                 </div>
@@ -243,8 +263,8 @@ export default function ManageStudents() {
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         >
                             <option value="children">الأطفال</option>
-                            <option value="young-girls">الفتيات</option>
-                            <option value="women">النساء</option>
+                            <option value="young-girls">اليافعات</option>
+                            <option value="women">المرأة</option>
                         </select>
                     </div>
 
@@ -289,43 +309,95 @@ export default function ManageStudents() {
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-sm text-gray-500">المستوى الدراسي</label>
-                        <select
-                            className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-                            value={formData.schoolLevel}
-                            onChange={(e) => setFormData({ ...formData, schoolLevel: e.target.value })}
-                        >
-                            <option value="">-- غير محدد --</option>
-                            <option value="روضة">روضة</option>
-                            <option value="ابتدائي">ابتدائي</option>
-                            <option value="اعدادي">إعدادي</option>
-                            <option value="ثانوي">ثانوي</option>
-                            <option value="جامعي">جامعي</option>
-                        </select>
-                    </div>
+                    {/* Conditional Fields based on Category */}
+                    {formData.category === 'women' ? (
+                        <>
+                            {/* Women-specific fields */}
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">رقم البطاقة الوطنية</label>
+                                <input
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+                                    placeholder="EE123456"
+                                    value={formData.idCardNumber}
+                                    onChange={(e) => setFormData({ ...formData, idCardNumber: e.target.value })}
+                                />
+                            </div>
 
-                    <div className="space-y-1">
-                        <label className="text-sm text-gray-500">مهنة ولي الأمر</label>
-                        <input
-                            className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-                            placeholder="مهنة ولي الأمر"
-                            value={formData.parentJob}
-                            onChange={(e) => setFormData({ ...formData, parentJob: e.target.value })}
-                        />
-                    </div>
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">المستوى الدراسي</label>
+                                <select
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                                    value={formData.educationLevel}
+                                    onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+                                >
+                                    <option value="">-- غير محدد --</option>
+                                    <option value="ابتدائي">ابتدائي</option>
+                                    <option value="إعدادي">إعدادي</option>
+                                    <option value="ثانوي">ثانوي</option>
+                                    <option value="جامعي">جامعي</option>
+                                    <option value="ماستر">ماستر</option>
+                                    <option value="دكتوراه">دكتوراه</option>
+                                </select>
+                            </div>
 
-                    <div className="space-y-1">
-                        <label className="text-sm text-gray-500">المجموعة</label>
-                        <input
-                            className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-                            placeholder="اسم المجموعة"
-                            value={formData.groupName}
-                            onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
-                        />
-                    </div>
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">المهنة / الوظيفة</label>
+                                <input
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                                    placeholder="مثال: ربة بيت، موظفة، تقنية..."
+                                    value={formData.occupation}
+                                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Children/Young Girls fields */}
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">المستوى الدراسي</label>
+                                <select
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                                    value={formData.schoolLevel}
+                                    onChange={(e) => setFormData({ ...formData, schoolLevel: e.target.value })}
+                                >
+                                    <option value="">-- غير محدد --</option>
+                                    <option value="روضة">روضة</option>
+                                    <option value="ابتدائي">ابتدائي</option>
+                                    <option value="اعدادي">إعدادي</option>
+                                    <option value="ثانوي">ثانوي</option>
+                                    <option value="جامعي">جامعي</option>
+                                </select>
+                            </div>
 
-                    {/* Row 3: Address & Social */}
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">مهنة ولي الأمر</label>
+                                <input
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                                    placeholder="مهنة ولي الأمر"
+                                    value={formData.parentJob}
+                                    onChange={(e) => setFormData({ ...formData, parentJob: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">الحالة الاجتماعية</label>
+                                <select
+                                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                                    value={formData.socialStatus}
+                                    onChange={(e) => setFormData({ ...formData, socialStatus: e.target.value })}
+                                >
+                                    <option value="">-- غير محدد --</option>
+                                    <option value="كليها">كليهما (الأب والأم)</option>
+                                    <option value="مع الأم">مع الأم</option>
+                                    <option value="مع الأب">مع الأب</option>
+                                    <option value="يتيم">يتيم</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Row 3: Address */}
                     <div className="space-y-1 md:col-span-2">
                         <label className="text-sm text-gray-500">العنوان</label>
                         <input
@@ -334,22 +406,6 @@ export default function ManageStudents() {
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-sm text-gray-500">الحالة الاجتماعية</label>
-                        <select
-                            className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-                            value={formData.socialStatus}
-                            onChange={(e) => setFormData({ ...formData, socialStatus: e.target.value })}
-                        >
-                            <option value="">-- غير محدد --</option>
-                            <option value="كليها">كليهما (الأب والأم)</option>
-                            <option value="مع الأم">مع الأم</option>
-                            <option value="مع الأب">مع الأب</option>
-                            <option value="يتيم">يتيم</option>
-                            <option value="أخرى">أخرى</option>
-                        </select>
                     </div>
 
                     <div className="space-y-1">
@@ -395,36 +451,62 @@ export default function ManageStudents() {
                 </form>
             </div>
 
+            {/* Search Bar */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        className="w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-green outline-none"
+                        placeholder="بحث باسم الطالب..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-600 text-sm flex items-center justify-between">
-                    <span>قائمة الطلاب ({students.length})</span>
+                    <span>قائمة الطلاب ({filteredStudents.length})</span>
+                    {searchQuery && <span className="text-xs text-gray-400 font-normal">نتائج البحث</span>}
                 </div>
-                <table className="w-full text-right">
-                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
-                        <tr>
-                            <th className="p-4 w-4">
-                                <input
-                                    type="checkbox"
-                                    onChange={handleSelectAll}
-                                    checked={students.length > 0 && selectedIds.length === students.length}
-                                />
-                            </th>
-                            <th className="p-4">الاسم</th>
-                            <th className="p-4">الهاتف</th>
-                            <th className="p-4">الفرع</th>
-                            <th className="p-4">المستوى</th>
-                            <th className="p-4">الحالة</th>
-                            <th className="p-4">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {students.map((s) => {
-                            const branch = data.branches?.find(b => b.id === s.branchId);
-                            const level = data.levels?.find(l => l.id === s.levelId);
-                            const isExpanded = expandedRow === s.id;
-                            return (
-                                <>
-                                    <tr key={s.id} className={`hover:bg-gray-50 transition-colors ${s.hasLeft ? 'bg-red-50' : ''}`}>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-right min-w-[900px]">
+                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase border-b">
+                            <tr>
+                                <th className="p-4 w-4">
+                                    <input
+                                        type="checkbox"
+                                        onChange={handleSelectAll}
+                                        checked={filteredStudents.length > 0 && selectedIds.length === filteredStudents.length}
+                                    />
+                                </th>
+                                <th className="p-4">الاسم</th>
+                                <th className="p-4">الفئة</th>
+                                <th className="p-4">الهاتف</th>
+                                <th className="p-4">الفرع</th>
+                                <th className="p-4">المستوى</th>
+                                <th className="p-4">المستوى الدراسي</th>
+                                <th className="p-4">الحالة</th>
+                                <th className="p-4">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredStudents.map((s) => {
+                                const branch = data.branches?.find(b => b.id === s.branchId);
+                                const level = data.levels?.find(l => l.id === s.levelId);
+                                const isEditing = selectedId === s.id;
+                                const categoryLabel = s.category === 'children' ? 'أطفال' : s.category === 'women' ? 'مرأة' : 'يافعات';
+                                return (
+                                    <tr
+                                        key={s.id}
+                                        className={`transition-colors ${isEditing
+                                            ? 'bg-blue-50 border-r-4 border-r-blue-500'
+                                            : s.hasLeft
+                                                ? 'bg-red-50 hover:bg-red-100'
+                                                : 'hover:bg-gray-50'
+                                            }`}
+                                    >
                                         <td className="p-4">
                                             <input
                                                 type="checkbox"
@@ -432,18 +514,12 @@ export default function ManageStudents() {
                                                 onChange={(e) => handleSelectOne(s.id, e.target.checked)}
                                             />
                                         </td>
-                                        <td className="p-4">
-                                            <button
-                                                onClick={() => setExpandedRow(isExpanded ? null : s.id)}
-                                                className="flex items-center gap-2 font-medium text-gray-800 hover:text-primary-green"
-                                            >
-                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                {s.name}
-                                            </button>
-                                        </td>
+                                        <td className="p-4 font-medium text-gray-800">{s.name || '-'}</td>
+                                        <td className="p-4 text-gray-600 text-sm">{categoryLabel}</td>
                                         <td className="p-4 text-gray-600 text-sm dir-ltr text-right">{s.phone || '-'}</td>
                                         <td className="p-4 text-gray-600 text-sm">{branch?.name || '-'}</td>
-                                        <td className="p-4 text-gray-600 text-sm">{level?.title || s.groupName || '-'}</td>
+                                        <td className="p-4 text-gray-600 text-sm">{level?.title || '-'}</td>
+                                        <td className="p-4 text-gray-600 text-sm">{s.schoolLevel || '-'}</td>
                                         <td className="p-4">
                                             {s.hasLeft ? (
                                                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">غادر</span>
@@ -452,7 +528,10 @@ export default function ManageStudents() {
                                             )}
                                         </td>
                                         <td className="p-4 flex gap-2">
-                                            <button onClick={() => handleEdit(s)} className="text-blue-500 hover:text-blue-700">
+                                            <button
+                                                onClick={() => handleEdit(s)}
+                                                className={`${isEditing ? 'text-blue-700' : 'text-blue-500 hover:text-blue-700'}`}
+                                            >
                                                 <Edit size={18} />
                                             </button>
                                             <button onClick={() => handleDelete(s.id)} className="text-red-500 hover:text-red-700">
@@ -460,49 +539,16 @@ export default function ManageStudents() {
                                             </button>
                                         </td>
                                     </tr>
-                                    {isExpanded && (
-                                        <tr key={`${s.id}-details`} className="bg-gray-50">
-                                            <td colSpan="7" className="p-4">
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                    <div>
-                                                        <span className="text-gray-400">الفئة:</span>
-                                                        <span className="mr-2 text-gray-700">{s.category === 'children' ? 'أطفال' : s.category === 'women' ? 'نساء' : 'فتيات'}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-400">المستوى الدراسي:</span>
-                                                        <span className="mr-2 text-gray-700">{s.schoolLevel || '-'}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-400">مهنة ولي الأمر:</span>
-                                                        <span className="mr-2 text-gray-700">{s.parentJob || '-'}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-400">الحالة الاجتماعية:</span>
-                                                        <span className="mr-2 text-gray-700">{s.socialStatus || '-'}</span>
-                                                    </div>
-                                                    <div className="md:col-span-2">
-                                                        <span className="text-gray-400">العنوان:</span>
-                                                        <span className="mr-2 text-gray-700">{s.address || '-'}</span>
-                                                    </div>
-                                                    {s.hasLeft && s.leaveReason && (
-                                                        <div className="md:col-span-2">
-                                                            <span className="text-gray-400">سبب المغادرة:</span>
-                                                            <span className="mr-2 text-red-600">{s.leaveReason}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </>
-                            );
-                        })}
-                    </tbody>
-                </table>
-                {students.length === 0 && (
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                {filteredStudents.length === 0 && (
                     <div className="p-8 text-center text-gray-400">لا يوجد طلاب</div>
                 )}
             </div>
         </div>
     );
 }
+

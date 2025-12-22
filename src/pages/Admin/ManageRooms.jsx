@@ -84,7 +84,7 @@ export default function ManageBaseData() {
   const resetForm = () => {
     setSelectedId(null);
     if (activeTab === 'branches') {
-      setFormData({ name: '', code: '' });
+      setFormData({ name: '', code: '', address: '', phone: '', email: '', schedule: '', locationLink: '' });
     } else if (activeTab === 'rooms') {
       setFormData({ name: '', capacity: '', type: 'classroom', branchId: '' });
     } else {
@@ -133,7 +133,15 @@ export default function ManageBaseData() {
   const handleEdit = (item) => {
     setSelectedId(item.id);
     if (activeTab === 'branches') {
-      setFormData({ name: item.name, code: item.code });
+      setFormData({
+        name: item.name || '',
+        code: item.code || '',
+        address: item.address || '',
+        phone: item.phone || '',
+        email: item.email || '',
+        schedule: item.schedule || '',
+        locationLink: item.locationLink || ''
+      });
     } else if (activeTab === 'rooms') {
       setFormData({
         name: item.name,
@@ -159,34 +167,80 @@ export default function ManageBaseData() {
           {selectedId ? <Edit size={20} /> : <Plus size={20} />}
           <span>{selectedId ? 'تعديل فرع' : 'إضافة فرع جديد'}</span>
         </h2>
-        <form onSubmit={handleSubmit} className="flex gap-4 items-end flex-wrap">
-          <div className="space-y-1 flex-1 min-w-[200px]">
-            <label className="text-sm text-gray-500">اسم الفرع</label>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">اسم الفرع *</label>
             <input
               required
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
-              placeholder="مثال: فرع تاركة"
+              placeholder="مثال: فرع تارگة"
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: toWesternNumerals(e.target.value) })}
             />
           </div>
-          <div className="space-y-1 w-40">
-            <label className="text-sm text-gray-500">رمز الفرع (Code)</label>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">رمز الفرع (Code) *</label>
             <input
               required
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
-              placeholder="TARKA"
+              placeholder="TARGA"
               value={formData.code || ''}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
             />
           </div>
-          <div className="flex justify-end gap-2 pb-0.5">
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">العنوان</label>
+            <input
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+              placeholder="حي تارگة، مراكش"
+              value={formData.address || ''}
+              onChange={(e) => setFormData({ ...formData, address: toWesternNumerals(e.target.value) })}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">رقم الهاتف</label>
+            <input
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+              placeholder="+212 6XX-XXXXXX"
+              value={formData.phone || ''}
+              onChange={(e) => setFormData({ ...formData, phone: toWesternNumerals(e.target.value) })}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">البريد الإلكتروني</label>
+            <input
+              type="email"
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+              placeholder="contact@example.com"
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-500">أوقات العمل</label>
+            <input
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+              placeholder="السبت - الخميس: 9:00 - 18:00"
+              value={formData.schedule || ''}
+              onChange={(e) => setFormData({ ...formData, schedule: toWesternNumerals(e.target.value) })}
+            />
+          </div>
+          <div className="space-y-1 lg:col-span-2">
+            <label className="text-sm text-gray-500">رابط الموقع على الخريطة</label>
+            <input
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+              placeholder="https://maps.google.com/..."
+              value={formData.locationLink || ''}
+              onChange={(e) => setFormData({ ...formData, locationLink: e.target.value })}
+            />
+          </div>
+          <div className="lg:col-span-3 flex justify-end gap-2 mt-2">
             {selectedId && (
               <button type="button" onClick={resetForm} className="px-4 py-2 text-gray-500 border rounded-lg hover:bg-gray-50">إلغاء</button>
             )}
             <button type="submit" disabled={loading} className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2">
               <Save size={18} />
-              <span>{selectedId ? 'حفظ' : 'إضافة'}</span>
+              <span>{selectedId ? 'حفظ التعديلات' : 'إضافة الفرع'}</span>
             </button>
           </div>
         </form>
@@ -197,6 +251,8 @@ export default function ManageBaseData() {
             <tr>
               <th className="p-4">اسم الفرع</th>
               <th className="p-4">الرمز</th>
+              <th className="p-4">العنوان</th>
+              <th className="p-4">الهاتف</th>
               <th className="p-4">الإجراءات</th>
             </tr>
           </thead>
@@ -205,6 +261,8 @@ export default function ManageBaseData() {
               <tr key={branch.id} className="hover:bg-gray-50 transition-colors">
                 <td className="p-4 font-medium text-gray-800">{branch.name}</td>
                 <td className="p-4 text-gray-600 font-mono text-sm">{branch.code}</td>
+                <td className="p-4 text-gray-600 text-sm">{branch.address || '-'}</td>
+                <td className="p-4 text-gray-600 text-sm dir-ltr text-right">{branch.phone || '-'}</td>
                 <td className="p-4 flex gap-2">
                   <button onClick={() => handleEdit(branch)} className="text-blue-500 hover:text-blue-700"><Edit size={18} /></button>
                   <button onClick={() => handleDelete(branch.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
@@ -304,8 +362,8 @@ export default function ManageBaseData() {
           <div className="space-y-1">
             <label className="text-sm text-gray-500">الفئة</label>
             <select className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none" value={formData.category || 'children'} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
-              <option value="women">النساء</option>
-              <option value="girls">الفتيات</option>
+              <option value="women">المرأة</option>
+              <option value="girls">اليافعات</option>
               <option value="children">الأطفال</option>
             </select>
           </div>
@@ -346,7 +404,7 @@ export default function ManageBaseData() {
                 <td className="p-4 font-medium text-gray-800">{level.title}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded text-xs ${level.category === 'women' ? 'bg-pink-100 text-pink-700' : level.category === 'girls' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {level.category === 'women' ? 'النساء' : level.category === 'girls' ? 'الفتيات' : 'الأطفال'}
+                    {level.category === 'women' ? 'المرأة' : level.category === 'girls' ? 'اليافعات' : 'الأطفال'}
                   </span>
                 </td>
                 <td className="p-4 text-gray-600 dir-ltr text-right">{level.order || '-'}</td>

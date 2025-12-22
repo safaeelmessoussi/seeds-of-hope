@@ -77,7 +77,7 @@ export default function SeedDatabase() {
                     title: womenLevels[i],
                     category: 'women',
                     order: i + 1,
-                    description: `المستوى ${i + 1} - برنامج النساء`
+                    description: `المستوى ${i + 1} - برنامج المرأة`
                 });
                 createdLevels.push(l);
             }

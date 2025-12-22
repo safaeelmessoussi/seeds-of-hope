@@ -1,12 +1,17 @@
 
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { Video, Headphones, FileText, Download, ExternalLink } from 'lucide-react';
 import { BackButton } from '../../components/Navbar';
+import { useEffect, useState, useRef } from 'react';
 
 export default function LevelContent() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const highlightId = searchParams.get('highlight');
     const { data } = useData();
+    const [highlightedContent, setHighlightedContent] = useState(highlightId);
+    const highlightRef = useRef(null);
 
     // Find the level details
     const level = data.levels?.find(l => l.id === id);
@@ -25,6 +30,22 @@ export default function LevelContent() {
 
     // Sort years descending
     const sortedYears = Object.keys(groupedContent).sort().reverse();
+
+    // Scroll to highlighted content and clear highlight after delay
+    useEffect(() => {
+        if (highlightId && highlightRef.current) {
+            // Scroll to element with offset for header
+            setTimeout(() => {
+                highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+
+            // Clear highlight after 5 seconds
+            const timer = setTimeout(() => {
+                setHighlightedContent(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [highlightId]);
 
     if (!level) {
         // ... (Keep existing error state)
@@ -106,39 +127,49 @@ export default function LevelContent() {
                                             </h3>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {contentByBranch[branchId].map((item) => (
-                                                    <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all group">
-                                                        <div className="p-6">
-                                                            <div className="flex items-start justify-between mb-4">
-                                                                <div className="bg-gray-50 p-3 rounded-lg group-hover:bg-gray-100 transition-colors">
-                                                                    {getIcon(item.type)}
+                                                {contentByBranch[branchId].map((item) => {
+                                                    const isHighlighted = item.id === highlightedContent;
+                                                    return (
+                                                        <div
+                                                            key={item.id}
+                                                            ref={isHighlighted ? highlightRef : null}
+                                                            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all group ${isHighlighted
+                                                                ? 'border-primary-green border-2 ring-4 ring-primary-green/30 animate-pulse'
+                                                                : 'border-gray-100'
+                                                                }`}
+                                                        >
+                                                            <div className="p-6">
+                                                                <div className="flex items-start justify-between mb-4">
+                                                                    <div className="bg-gray-50 p-3 rounded-lg group-hover:bg-gray-100 transition-colors">
+                                                                        {getIcon(item.type)}
+                                                                    </div>
+                                                                    <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                                                        {getTypeLabel(item.type)}
+                                                                    </span>
                                                                 </div>
-                                                                <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded text-gray-600">
-                                                                    {getTypeLabel(item.type)}
-                                                                </span>
-                                                            </div>
-                                                            <h3 className="font-bold text-gray-800 mb-2 line-clamp-2">{item.title}</h3>
+                                                                <h3 className="font-bold text-gray-800 mb-2 line-clamp-2">{item.title}</h3>
 
-                                                            <div className="space-y-2 mt-4">
-                                                                {(item.urls || [item.url]).map((url, idx) => {
-                                                                    if (!url) return null;
-                                                                    return (
-                                                                        <a
-                                                                            key={idx}
-                                                                            href={url}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-primary-green hover:bg-green-50/10 text-sm text-gray-600 hover:text-primary-green transition-all"
-                                                                        >
-                                                                            <span className="truncate flex-1 ml-2 dir-ltr text-left">{url}</span>
-                                                                            <ExternalLink size={16} />
-                                                                        </a>
-                                                                    );
-                                                                })}
+                                                                <div className="space-y-2 mt-4">
+                                                                    {(item.urls || [item.url]).map((url, idx) => {
+                                                                        if (!url) return null;
+                                                                        return (
+                                                                            <a
+                                                                                key={idx}
+                                                                                href={url}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-primary-green hover:bg-green-50/10 text-sm text-gray-600 hover:text-primary-green transition-all"
+                                                                            >
+                                                                                <span className="truncate flex-1 ml-2 dir-ltr text-left">{url}</span>
+                                                                                <ExternalLink size={16} />
+                                                                            </a>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );

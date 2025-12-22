@@ -27,8 +27,8 @@ export default function Levels() {
     };
 
     const categoryLabels = {
-        women: 'برنامج النساء',
-        girls: 'برنامج الفتيات',
+        women: 'برنامج المرأة',
+        girls: 'برنامج اليافعات',
         children: 'برنامج الأطفال'
     };
 

@@ -72,6 +72,7 @@ export default function Calendar() {
             const room = data.rooms?.find(r => r.id === event.roomId);
             const level = data.levels?.find(l => l.id === event.levelId);
             const branch = data.branches?.find(b => b.id === event.branchId);
+            const content = data.content?.find(c => c.id === event.contentId);
 
             return {
                 ...event,
@@ -81,10 +82,11 @@ export default function Calendar() {
                 roomName: room?.name,
                 levelName: level?.title,
                 branchName: branch?.name,
+                contentName: content?.title,
                 levelColor: event.levelId ? levelColorMap[event.levelId] : '#6B7280'
             };
         });
-    }, [data.events, data.teachers, data.rooms, data.levels, data.branches, levelColorMap]);
+    }, [data.events, data.teachers, data.rooms, data.levels, data.branches, data.content, levelColorMap]);
 
     // Filter events by selected level
     const filteredEvents = useMemo(() => {
@@ -127,8 +129,8 @@ export default function Calendar() {
                     <button
                         onClick={() => setSelectedLevelFilter('')}
                         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!selectedLevelFilter
-                                ? 'bg-gray-800 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-gray-800 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
                         الكل
@@ -144,8 +146,8 @@ export default function Calendar() {
                                 key={level.id}
                                 onClick={() => handleLevelClick(level.id)}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${isSelected
-                                        ? 'text-white shadow-md scale-105'
-                                        : 'text-gray-700 hover:scale-105'
+                                    ? 'text-white shadow-md scale-105'
+                                    : 'text-gray-700 hover:scale-105'
                                     }`}
                                 style={{
                                     backgroundColor: isSelected ? color : `${color}20`,

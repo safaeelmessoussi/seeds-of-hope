@@ -55,6 +55,7 @@ export default function ManageCalendar() {
         roomId: '',
         branchId: '',
         levelId: '',  // New: for level-specific events
+        contentId: '', // New: link to specific content
         recurrence: 'none',
         recurrenceEnd: '',
     });
@@ -120,6 +121,7 @@ export default function ManageCalendar() {
             roomId: '',
             branchId: '',
             levelId: '',
+            contentId: '',
             recurrence: 'none',
             recurrenceEnd: ''
         });
@@ -147,6 +149,7 @@ export default function ManageCalendar() {
             roomId: event.roomId || '',
             branchId: event.branchId || '',
             levelId: event.levelId || '',
+            contentId: event.contentId || '',
             recurrence: event.recurrence || 'none',
             recurrenceEnd: event.recurrenceEnd || ''
         });
@@ -186,7 +189,8 @@ export default function ManageCalendar() {
             teacherId: formData.teacherId,
             roomId: formData.roomId,
             branchId: formData.branchId,
-            levelId: formData.levelId  // Add level
+            levelId: formData.levelId,
+            contentId: formData.contentId  // Link to content
         };
 
         try {
@@ -369,8 +373,8 @@ export default function ManageCalendar() {
                     <button
                         onClick={() => setSelectedLevelFilter('')}
                         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!selectedLevelFilter
-                                ? 'bg-gray-800 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-gray-800 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
                         الكل
@@ -386,8 +390,8 @@ export default function ManageCalendar() {
                                 key={level.id}
                                 onClick={() => handleLevelClick(level.id)}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${isSelected
-                                        ? 'text-white shadow-md scale-105'
-                                        : 'text-gray-700 hover:scale-105'
+                                    ? 'text-white shadow-md scale-105'
+                                    : 'text-gray-700 hover:scale-105'
                                     }`}
                                 style={{
                                     backgroundColor: isSelected ? color : `${color}20`,
@@ -462,6 +466,27 @@ export default function ManageCalendar() {
                                 .map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
                         </select>
                     </div>
+
+                    {/* Content Link - only shows if level is selected */}
+                    {formData.levelId && (
+                        <div className="space-y-1">
+                            <label className="text-sm text-gray-500">ربط بمحتوى (اختياري)</label>
+                            <select
+                                className="w-full border rounded-lg p-2"
+                                value={formData.contentId || ''}
+                                onChange={e => setFormData({ ...formData, contentId: e.target.value })}
+                            >
+                                <option value="">بدون ربط</option>
+                                {(data.content || [])
+                                    .filter(c => c.levelId === formData.levelId)
+                                    .map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.title}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="space-y-1">
                         <label className="text-sm text-gray-500">المؤطرة</label>

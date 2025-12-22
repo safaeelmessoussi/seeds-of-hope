@@ -235,8 +235,8 @@ export default function GradeEntry() {
 
     const getCategoryLabel = (category) => {
         switch (category) {
-            case 'women': return 'النساء';
-            case 'girls': return 'الفتيات';
+            case 'women': return 'المرأة';
+            case 'girls': return 'اليافعات';
             case 'children': return 'الأطفال';
             default: return '';
         }
