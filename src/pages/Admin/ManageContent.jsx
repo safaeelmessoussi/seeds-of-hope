@@ -6,6 +6,7 @@ import { Save, Trash2, Edit, Plus, Video, Headphones, FileText, Image } from 'lu
 import { toWesternNumerals } from '../../utils/dateUtils';
 import { BackButton } from '../../components/Navbar';
 import DataImportExportComponent from '../../components/DataImportExport';
+import FileUpload from '../../components/FileUpload';
 
 export default function ManageContent() {
   const { data, refreshData } = useData();
@@ -283,7 +284,7 @@ export default function ManageContent() {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm text-gray-500">المستوى الدراسي</label>
+              <label className="text-sm text-gray-500">المستوى بالجمعية</label>
               <select
                 required
                 className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
@@ -316,26 +317,25 @@ export default function ManageContent() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm text-gray-500 flex justify-between">
-              <span>روابط الملفات / الفيديوهات</span>
+            <label className="text-sm text-gray-500">
+              <span>رفع الملفات أو إضافة روابط</span>
             </label>
-            {formData.urls.map((url, idx) => (
-              <div key={idx} className="flex gap-2">
-                <button type="button" onClick={() => removeUrlField(idx)} className="text-red-400 hover:text-red-600">
-                  <Trash2 size={18} />
-                </button>
-                <input
-                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-left"
-                  placeholder="https://..."
-                  value={url}
-                  onChange={(e) => handleUrlChange(idx, e.target.value)}
-                />
-              </div>
-            ))}
-            <button type="button" onClick={addUrlField} className="text-sm text-primary-green hover:underline flex items-center gap-1">
-              <Plus size={16} />
-              <span>إضافة رابط آخر</span>
-            </button>
+            <FileUpload
+              currentUrl={formData.urls?.[0] || ''}
+              currentType={formData.type}
+              onUpload={(url, detectedType) => {
+                if (url) {
+                  setFormData({
+                    ...formData,
+                    urls: [url],
+                    type: detectedType || formData.type
+                  });
+                } else {
+                  setFormData({ ...formData, urls: [''] });
+                }
+              }}
+            />
+            <p className="text-xs text-gray-400">يمكنك سحب وإفلات الملف، أو الضغط للاختيار، أو إضافة رابط خارجي</p>
           </div>
 
           <div className="flex justify-end gap-2 mt-2">

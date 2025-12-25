@@ -9,7 +9,7 @@ export function useData() {
 }
 
 // Collections to sync
-const COLLECTIONS = ['levels', 'rooms', 'teachers', 'contents', 'events', 'branches', 'users', 'students', 'grades', 'attendance'];
+const COLLECTIONS = ['levels', 'rooms', 'teachers', 'contents', 'events', 'branches', 'users', 'students', 'grades', 'attendance', 'activityTypes', 'categories', 'socialStatuses', 'schoolLevels'];
 
 export function DataProvider({ children }) {
     const { currentUser } = useAuth();
@@ -23,7 +23,11 @@ export function DataProvider({ children }) {
         users: [],
         students: [],
         grades: [],
-        attendance: []
+        attendance: [],
+        activityTypes: [],
+        categories: [],
+        socialStatuses: [],
+        schoolLevels: []
     });
     const [loading, setLoading] = useState(true);
 

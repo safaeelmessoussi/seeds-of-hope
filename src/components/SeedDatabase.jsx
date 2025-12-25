@@ -149,6 +149,53 @@ export default function SeedDatabase() {
                 branchId: branchA.id
             });
 
+            // 8. Dropdown Values - Activity Types
+            const activityTypes = [
+                { name: 'حصة', value: 'class' },
+                { name: 'نشاط', value: 'activity' },
+                { name: 'اجتماع', value: 'meeting' },
+                { name: 'امتحان', value: 'exam' },
+                { name: 'عطلة', value: 'vacation' }
+            ];
+            for (const at of activityTypes) {
+                await dbService.add('activityTypes', at);
+            }
+
+            // 9. Categories
+            const categories = [
+                { name: 'أطفال', value: 'children' },
+                { name: 'يافعات', value: 'girls' },
+                { name: 'نساء', value: 'women' }
+            ];
+            for (const c of categories) {
+                await dbService.add('categories', c);
+            }
+
+            // 10. Social Statuses
+            const socialStatuses = [
+                { name: 'عازب/عازبة', value: 'single' },
+                { name: 'متزوج/متزوجة', value: 'married' },
+                { name: 'مطلق/مطلقة', value: 'divorced' },
+                { name: 'أرمل/أرملة', value: 'widowed' }
+            ];
+            for (const ss of socialStatuses) {
+                await dbService.add('socialStatuses', ss);
+            }
+
+            // 11. School Levels
+            const schoolLevels = [
+                { name: 'ابتدائي', value: 'primary' },
+                { name: 'إعدادي', value: 'middle' },
+                { name: 'ثانوي', value: 'high' },
+                { name: 'جامعي', value: 'university' },
+                { name: 'ماستر', value: 'master' },
+                { name: 'دكتوراه', value: 'phd' },
+                { name: 'بدون', value: 'none' }
+            ];
+            for (const sl of schoolLevels) {
+                await dbService.add('schoolLevels', sl);
+            }
+
             alert('تم إضافة البيانات بنجاح!');
             await refreshData();
         } catch (error) {

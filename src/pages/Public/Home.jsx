@@ -1,39 +1,103 @@
 import { useData } from '../../context/DataContext';
-import { Users, BookOpen, Calendar, MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { Users, BookOpen, Calendar, MapPin, Phone, Mail, Clock, Heart, Baby, Star, Award, Handshake, Sparkles, ArrowLeft, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Branch colors for alternating display
 const BRANCH_COLORS = [
-    { bg: 'from-green-50 to-green-100', border: 'border-green-200', title: 'text-green-800', icon: 'text-green-600', text: 'text-green-700', link: 'text-green-600 hover:text-green-800' },
-    { bg: 'from-orange-50 to-orange-100', border: 'border-orange-200', title: 'text-orange-800', icon: 'text-orange-600', text: 'text-orange-700', link: 'text-orange-600 hover:text-orange-800' },
-    { bg: 'from-purple-50 to-purple-100', border: 'border-purple-200', title: 'text-purple-800', icon: 'text-purple-600', text: 'text-purple-700', link: 'text-purple-600 hover:text-purple-800' },
-    { bg: 'from-cyan-50 to-cyan-100', border: 'border-cyan-200', title: 'text-cyan-800', icon: 'text-cyan-600', text: 'text-cyan-700', link: 'text-cyan-600 hover:text-cyan-800' }
+    { bg: 'from-emerald-50 to-teal-50', border: 'border-emerald-200', title: 'text-emerald-800', icon: 'text-emerald-600', text: 'text-emerald-700', link: 'text-emerald-600 hover:text-emerald-800' },
+    { bg: 'from-amber-50 to-orange-50', border: 'border-amber-200', title: 'text-amber-800', icon: 'text-amber-600', text: 'text-amber-700', link: 'text-amber-600 hover:text-amber-800' },
 ];
 
 export default function Home() {
     const { data } = useData();
     const branches = data.branches || [];
 
+    // Statistics from association data
+    const stats = [
+        { label: 'امرأة مستفيدة', count: '400+', icon: Heart, color: 'from-pink-500 to-rose-500' },
+        { label: 'فتاة يافعة', count: '143', icon: Star, color: 'from-purple-500 to-violet-500' },
+        { label: 'طفل وطفلة', count: '340+', icon: Baby, color: 'from-emerald-500 to-teal-500' },
+        { label: 'سنة من العطاء', count: '13+', icon: Award, color: 'from-amber-500 to-orange-500' }
+    ];
+
     return (
-        <div className="flex flex-col gap-8">
-            {/* Hero Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
-                <h1 className="text-2xl md:text-3xl font-bold text-primary-green mb-4">
-                    مرحباً بكم في جمعية بذور الأمل
-                </h1>
-                <p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                    جمعية تعليمية وتربوية تهتم بتنمية قدرات المرأة والطفل من خلال برامج تعليمية متكاملة ومتنوعة.
-                </p>
+        <div className="flex flex-col gap-10">
+            {/* Hero Section with Landing Image */}
+            <div className="relative overflow-hidden rounded-3xl shadow-2xl min-h-[500px] md:min-h-[600px]">
+                {/* Background Image */}
+                <img
+                    src="/landing_Image.png"
+                    alt="جمعية بذور الأمل"
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-end h-full min-h-[500px] md:min-h-[600px] p-8 md:p-16 text-center">
+
+                    {/* Title */}
+                    <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg">
+                        جمعية بذور الأمل
+                    </h1>
+                    <p className="text-lg md:text-xl text-white/90 mb-2 font-medium">
+                        للمرأة والطفل
+                    </p>
+                    <p className="text-white/80 max-w-2xl mx-auto leading-relaxed mb-8 text-sm md:text-base">
+                        منذ <span className="font-bold text-amber-300">2011</span> نكرس جهودنا لتحسين حياة المجتمع
+                        من خلال مشاريع تعليمية واجتماعية تستهدف النساء والأطفال
+                    </p>
+
+                    {/* CTA Buttons */}
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <Link
+                            to="/programs"
+                            className="inline-flex items-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-xl font-bold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                        >
+                            <Sparkles size={20} />
+                            اكتشف برامجنا
+                        </Link>
+                        <Link
+                            to="/levels"
+                            className="inline-flex items-center gap-2 bg-white/20 text-white border-2 border-white/50 px-6 py-3 rounded-xl font-bold hover:bg-white/30 transition-all backdrop-blur-sm"
+                        >
+                            <BookOpen size={20} />
+                            المحتوى التعليمي
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
+            {/* Statistics - Floating Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 -mt-6 relative z-20 px-4">
+                {stats.map((stat, idx) => (
+                    <div
+                        key={idx}
+                        className="bg-white rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 border border-gray-100 group"
+                    >
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white mb-3 shadow-lg group-hover:scale-110 transition-transform`}>
+                            <stat.icon size={24} />
+                        </div>
+                        <div className="text-3xl font-bold text-gray-800">{stat.count}</div>
+                        <div className="text-sm text-gray-500">{stat.label}</div>
+                    </div>
+                ))}
             </div>
 
             {/* Introduction Video */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-                <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">تعرف على جمعيتنا</h2>
-                <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 overflow-hidden">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white">
+                        <Play size={20} />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-800">تعرف على جمعيتنا</h2>
+                </div>
+                <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
                     <video
                         controls
-                        className="w-full rounded-lg shadow-lg"
-                        poster=""
+                        className="w-full"
+                        poster="/favicon.png"
                     >
                         <source src="/intro-video.mp4" type="video/mp4" />
                         متصفحك لا يدعم تشغيل الفيديو.
@@ -41,101 +105,174 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Features/Services - Clickable Cards */}
+            {/* Quick Access Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Link
                     to="/programs"
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center gap-4 hover:shadow-md hover:border-pink-200 hover:bg-pink-50/30 transition-all cursor-pointer group"
+                    className="group relative bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl p-6 text-white overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1"
                 >
-                    <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center text-pink-500 group-hover:scale-110 transition-transform">
-                        <Users size={28} />
-                    </div>
-                    <h3 className="font-bold text-gray-800">برامج متنوعة</h3>
-                    <p className="text-sm text-gray-500">برامج مخصصة للنساء واليافعات والأطفال</p>
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                    <Users size={32} className="mb-4" />
+                    <h3 className="font-bold text-xl mb-2">برامج متنوعة</h3>
+                    <p className="text-sm text-white/80">للنساء واليافعات والأطفال</p>
+                    <ArrowLeft size={20} className="absolute bottom-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
+
                 <Link
                     to="/levels"
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center gap-4 hover:shadow-md hover:border-green-200 hover:bg-green-50/30 transition-all cursor-pointer group"
+                    className="group relative bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-6 text-white overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1"
                 >
-                    <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
-                        <BookOpen size={28} />
-                    </div>
-                    <h3 className="font-bold text-gray-800">محتوى تعليمي</h3>
-                    <p className="text-sm text-gray-500">دروس ومحاضرات في مختلف المجالات</p>
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                    <BookOpen size={32} className="mb-4" />
+                    <h3 className="font-bold text-xl mb-2">محتوى تعليمي</h3>
+                    <p className="text-sm text-white/80">دروس ومحاضرات متنوعة</p>
+                    <ArrowLeft size={20} className="absolute bottom-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
+
                 <Link
                     to="/calendar"
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center gap-4 hover:shadow-md hover:border-purple-200 hover:bg-purple-50/30 transition-all cursor-pointer group"
+                    className="group relative bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl p-6 text-white overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1"
                 >
-                    <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
-                        <Calendar size={28} />
-                    </div>
-                    <h3 className="font-bold text-gray-800">جدول منظم</h3>
-                    <p className="text-sm text-gray-500">حصص ومواعيد منظمة طوال الأسبوع</p>
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                    <Calendar size={32} className="mb-4" />
+                    <h3 className="font-bold text-xl mb-2">الجدول الزمني</h3>
+                    <p className="text-sm text-white/80">حصص ومواعيد منظمة</p>
+                    <ArrowLeft size={20} className="absolute bottom-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
             </div>
 
-            {/* Branches & Contact - Dynamic from Database */}
+            {/* About - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 md:p-8 border border-emerald-100">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white">
+                            <BookOpen size={20} />
+                        </div>
+                        <h3 className="font-bold text-lg text-emerald-800">الأنشطة الثقافية</h3>
+                    </div>
+                    <ul className="space-y-3">
+                        {[
+                            'محاربة الأمية من الابتدائي والإعدادي',
+                            'تعلم قواعد التجويد وحفظ القرآن الكريم',
+                            'دروس في العقيدة وتفسير القرآن الكريم',
+                            'حصص في اللغة الإنجليزية',
+                            'دورات في التنمية الذاتية والكوتشينغ',
+                            'خلية القراءة لمناقشة الكتب'
+                        ].map((item, i) => (
+                            <li key={i} className="flex items-start gap-3 text-emerald-700">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full mt-2 shrink-0" />
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 md:p-8 border border-amber-100">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-white">
+                            <Heart size={20} />
+                        </div>
+                        <h3 className="font-bold text-lg text-amber-800">الأنشطة الاجتماعية</h3>
+                    </div>
+                    <ul className="space-y-3">
+                        {[
+                            'إفطار الطالب الجامعي (2000+ طالب)',
+                            'توزيع قفة رمضان للمحتاجين',
+                            'توزيع الملابس للمناطق النائية',
+                            'تنظيم قوافل طبية',
+                            'رحلة سنوية لأداء العمرة',
+                            'دعم ضحايا زلزال 2023'
+                        ].map((item, i) => (
+                            <li key={i} className="flex items-start gap-3 text-amber-700">
+                                <span className="w-2 h-2 bg-amber-500 rounded-full mt-2 shrink-0" />
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+
+            {/* Partners */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                <div className="flex items-center justify-center gap-3 mb-6">
+                    <Handshake className="text-emerald-600" size={24} />
+                    <h2 className="text-xl font-bold text-gray-800">شركاؤنا</h2>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3">
+                    {[
+                        'المجلس البلدي لمدينة مراكش',
+                        'الأكاديمية الجهوية للتربية والتكوين',
+                        'جامعة القاضي عياض',
+                        'أساتذة باحثين ومتخصصين'
+                    ].map((partner, i) => (
+                        <span
+                            key={i}
+                            className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-2 rounded-full text-sm text-gray-700 border border-gray-200 hover:border-emerald-300 transition-colors"
+                        >
+                            {partner}
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            {/* Branches & Contact */}
             {branches.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">فروعنا ومعلومات التواصل</h2>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                    <div className="flex items-center justify-center gap-3 mb-8">
+                        <MapPin className="text-emerald-600" size={24} />
+                        <h2 className="text-xl font-bold text-gray-800">فروعنا ومعلومات التواصل</h2>
+                    </div>
 
                     <div className={`grid grid-cols-1 ${branches.length === 1 ? '' : 'md:grid-cols-2'} gap-6`}>
                         {branches.map((branch, idx) => {
                             const colors = BRANCH_COLORS[idx % BRANCH_COLORS.length];
                             return (
-                                <div key={branch.id} className={`bg-gradient-to-br ${colors.bg} rounded-xl p-5 border ${colors.border}`}>
+                                <div key={branch.id} className={`bg-gradient-to-br ${colors.bg} rounded-2xl p-6 border ${colors.border} hover:shadow-lg transition-shadow`}>
                                     <h3 className={`font-bold ${colors.title} text-lg mb-4 flex items-center gap-2`}>
                                         <MapPin className={colors.icon} size={20} />
                                         {branch.name}
                                     </h3>
 
                                     <div className={`space-y-3 text-sm ${colors.text}`}>
-                                        {/* Address */}
                                         {branch.address && (
                                             <div className="flex items-start gap-2">
                                                 <MapPin size={16} className="mt-0.5 shrink-0" />
                                                 <span>{branch.address}</span>
                                             </div>
                                         )}
-
-                                        {/* Phone */}
                                         {branch.phone && (
                                             <div className="flex items-center gap-2">
-                                                <Phone size={16} className="shrink-0" />
-                                                <span className="dir-ltr">{branch.phone}</span>
+                                                <Phone size={16} />
+                                                <a href={`tel:${branch.phone}`} className={colors.link} dir="ltr">{branch.phone}</a>
                                             </div>
                                         )}
-
-                                        {/* Email */}
                                         {branch.email && (
                                             <div className="flex items-center gap-2">
-                                                <Mail size={16} className="shrink-0" />
-                                                <span className="dir-ltr">{branch.email}</span>
+                                                <Mail size={16} />
+                                                <a href={`mailto:${branch.email}`} className={colors.link}>{branch.email}</a>
                                             </div>
                                         )}
-
-                                        {/* Schedule */}
                                         {branch.schedule && (
-                                            <div className="flex items-center gap-2">
-                                                <Clock size={16} className="shrink-0" />
+                                            <div className="flex items-start gap-2">
+                                                <Clock size={16} className="mt-0.5 shrink-0" />
                                                 <span>{branch.schedule}</span>
                                             </div>
                                         )}
+                                        {branch.locationLink && (
+                                            <a
+                                                href={branch.locationLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`inline-flex items-center gap-1 text-xs font-medium mt-2 ${colors.link}`}
+                                            >
+                                                <MapPin size={12} />
+                                                عرض الموقع على الخريطة
+                                            </a>
+                                        )}
                                     </div>
-
-                                    {/* Location Link */}
-                                    {branch.locationLink && (
-                                        <a
-                                            href={branch.locationLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`inline-flex items-center gap-1 text-xs ${colors.link} underline mt-4`}
-                                        >
-                                            <MapPin size={14} />
-                                            عرض على الخريطة
-                                        </a>
-                                    )}
                                 </div>
                             );
                         })}

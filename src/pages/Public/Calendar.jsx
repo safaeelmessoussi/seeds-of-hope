@@ -67,6 +67,13 @@ export default function Calendar() {
 
     // Enrich events with colors
     const allEvents = useMemo(() => {
+        // Special event type colors
+        const getEventColor = (event) => {
+            if (event.type === 'vacation') return '#DC2626'; // Red for vacations
+            if (event.type === 'exam') return '#D97706'; // Amber/Orange for exams
+            return event.levelId ? levelColorMap[event.levelId] : '#6B7280';
+        };
+
         return (data.events || []).map(event => {
             const teacher = data.teachers?.find(t => t.id === event.teacherId);
             const room = data.rooms?.find(r => r.id === event.roomId);
@@ -78,12 +85,12 @@ export default function Calendar() {
                 ...event,
                 start: new Date(event.start),
                 end: new Date(event.end),
-                teacherName: teacher?.name,
+                teacherName: teacher ? (teacher.nickname || `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || teacher.name) : null,
                 roomName: room?.name,
                 levelName: level?.title,
                 branchName: branch?.name,
                 contentName: content?.title,
-                levelColor: event.levelId ? levelColorMap[event.levelId] : '#6B7280'
+                levelColor: getEventColor(event)
             };
         });
     }, [data.events, data.teachers, data.rooms, data.levels, data.branches, data.content, levelColorMap]);
@@ -101,7 +108,8 @@ export default function Calendar() {
 
     // Add Branch Calendars
     branches.forEach(branch => {
-        const branchEvents = filteredEvents.filter(e => e.branchId === branch.id);
+        // Include events for this branch OR events with no branch (general/shared events)
+        const branchEvents = filteredEvents.filter(e => e.branchId === branch.id || !e.branchId);
         calendarsToRender.push({
             id: branch.id,
             title: `جدول ${branch.name}`,

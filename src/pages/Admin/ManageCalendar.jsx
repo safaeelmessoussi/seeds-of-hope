@@ -58,6 +58,7 @@ export default function ManageCalendar() {
         contentId: '', // New: link to specific content
         recurrence: 'none',
         recurrenceEnd: '',
+        isAllDay: false, // New: for all-day events like vacations
     });
 
     // Series Update Mode
@@ -80,13 +81,20 @@ export default function ManageCalendar() {
                 levelColorMap[level.id] = levelColors[idx % levelColors.length];
             });
 
+            // Special event type colors
+            const getEventColor = (ev) => {
+                if (ev.type === 'vacation') return '#DC2626'; // Red for vacations
+                if (ev.type === 'exam') return '#D97706'; // Amber/Orange for exams
+                return ev.levelId ? levelColorMap[ev.levelId] : '#6B7280';
+            };
+
             setEvents(
                 data.events.map(ev => ({
                     ...ev,
                     start: new Date(ev.start),
                     end: new Date(ev.end),
                     isRecurring: !!ev.seriesId,
-                    levelColor: ev.levelId ? levelColorMap[ev.levelId] : '#6B7280'
+                    levelColor: getEventColor(ev)
                 }))
             );
         }
@@ -153,6 +161,8 @@ export default function ManageCalendar() {
             recurrence: event.recurrence || 'none',
             recurrenceEnd: event.recurrenceEnd || ''
         });
+        // Reset update mode when selecting a new event
+        setUpdateMode('single');
     };
 
     const handleEventDrop = async ({ event, start, end }) => {
@@ -196,21 +206,25 @@ export default function ManageCalendar() {
         try {
             if (selectedEvent) {
                 // UPDATE LOGIC
-                if (selectedEvent.seriesId && updateMode !== 'single') {
-                    // Series Update
+                const isRecurring = selectedEvent.seriesId;
+
+                if (isRecurring && updateMode === 'single') {
+                    // SINGLE EVENT UPDATE - Update just this event, keep it in the series
+                    const singleEventPayload = {
+                        ...eventPayload,
+                        seriesId: selectedEvent.seriesId, // Keep in series
+                        recurrence: selectedEvent.recurrence || 'none'
+                    };
+                    await dbService.update('events', selectedEvent.id, singleEventPayload);
+
+                } else if (isRecurring && updateMode === 'future') {
+                    // FUTURE EVENTS UPDATE - Delete this and future, recreate series from this date
                     const seriesId = selectedEvent.seriesId;
-                    const fromDate = updateMode === 'future' ? eventPayload.start : null;
 
-                    // 1. Delete relevant recurring events
-                    await dbService.deleteSeries('events', seriesId, fromDate);
+                    // Delete this event and all future events in the series
+                    await dbService.deleteSeries('events', seriesId, selectedEvent.start);
 
-                    // 2. Re-create events
-                    // If we are updating "Future" or "All", we generally re-create the series.
-                    // However, if recurrence params are not in the form (recurrence='none'), 
-                    // this essentially converts it to a single event or a new series if specified.
-                    // For MVP simplicity: If recurrence is 'none', we create a single event.
-                    // If recurrence is set, we create a series.
-
+                    // Create new series from this date if recurrence is set
                     if (formData.recurrence !== 'none' && formData.recurrenceEnd) {
                         const newSeriesId = crypto.randomUUID();
                         const events = generateEventSeries(
@@ -221,13 +235,36 @@ export default function ManageCalendar() {
                         );
                         await dbService.addBatch('events', events);
                     } else {
-                        // Just add as single event (breaking the loop if it was a loop)
+                        // Just add this as single event
                         await dbService.add('events', eventPayload);
                     }
-                } else {
-                    // Single Update (or clean single event)
+
+                } else if (isRecurring && updateMode === 'all') {
+                    // ALL EVENTS UPDATE - Delete entire series, recreate with new params
+                    const seriesId = selectedEvent.seriesId;
+
+                    // Delete entire series
+                    await dbService.deleteSeries('events', seriesId, null);
+
+                    // Create new series with updated params
                     if (formData.recurrence !== 'none' && formData.recurrenceEnd) {
-                        // User is converting a single event (or one instance) into a Series
+                        const newSeriesId = crypto.randomUUID();
+                        const events = generateEventSeries(
+                            eventPayload,
+                            formData.recurrence,
+                            new Date(formData.recurrenceEnd),
+                            newSeriesId
+                        );
+                        await dbService.addBatch('events', events);
+                    } else {
+                        // Convert to single event
+                        await dbService.add('events', eventPayload);
+                    }
+
+                } else {
+                    // NON-RECURRING EVENT UPDATE
+                    if (formData.recurrence !== 'none' && formData.recurrenceEnd) {
+                        // Convert single event to series
                         await dbService.hardDelete('events', selectedEvent.id);
 
                         const seriesId = crypto.randomUUID();
@@ -496,7 +533,10 @@ export default function ManageCalendar() {
                             onChange={e => setFormData({ ...formData, teacherId: e.target.value })}
                         >
                             <option value="">اختيار مؤطرة...</option>
-                            {data.teachers?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            {data.teachers?.map(t => {
+                                const displayName = t.nickname || `${t.firstName || ''} ${t.lastName || ''}`.trim() || t.name || '-';
+                                return <option key={t.id} value={t.id}>{displayName}</option>;
+                            })}
                         </select>
                     </div>
 
@@ -549,28 +589,43 @@ export default function ManageCalendar() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                            <label className="text-sm text-gray-500">من</label>
-                            <input
-                                type="time"
-                                className="w-full border rounded-lg p-2 dir-ltr text-right"
-                                value={formData.startTime}
-                                onChange={e => setFormData({ ...formData, startTime: e.target.value })}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm text-gray-500">إلى</label>
-                            <input
-                                type="time"
-                                className="w-full border rounded-lg p-2 dir-ltr text-right"
-                                value={formData.endTime}
-                                onChange={e => setFormData({ ...formData, endTime: e.target.value })}
-                                required
-                            />
-                        </div>
+                    {/* All-Day Checkbox */}
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="isAllDay"
+                            checked={formData.isAllDay}
+                            onChange={e => setFormData({ ...formData, isAllDay: e.target.checked, startTime: '', endTime: '' })}
+                            className="w-4 h-4 text-primary-green border-gray-300 rounded focus:ring-primary-green"
+                        />
+                        <label htmlFor="isAllDay" className="text-sm text-gray-600">حدث لليوم كامل (عطلة، مناسبة...)</label>
                     </div>
+
+                    {/* Time inputs - only show if not all-day */}
+                    {!formData.isAllDay && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">من</label>
+                                <input
+                                    type="time"
+                                    className="w-full border rounded-lg p-2 dir-ltr text-right"
+                                    value={formData.startTime}
+                                    onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm text-gray-500">إلى</label>
+                                <input
+                                    type="time"
+                                    className="w-full border rounded-lg p-2 dir-ltr text-right"
+                                    value={formData.endTime}
+                                    onChange={e => setFormData({ ...formData, endTime: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Recurrence Options */}
                     <div className="space-y-1">
@@ -726,18 +781,39 @@ export default function ManageCalendar() {
                                                             className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
                                                             onClick={() => toggleGroup(item.seriesId)}
                                                         >
-                                                            <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-3 flex-1">
                                                                 <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : 'rotate-180'}`}>
                                                                     ▼
                                                                 </span>
-                                                                <div>
-                                                                    <div className="font-bold text-gray-800 flex items-center gap-2">
+                                                                <div className="flex-1">
+                                                                    <div className="font-bold text-gray-800 flex items-center gap-2 flex-wrap">
                                                                         {item.title}
                                                                         <span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">سلسلة ({item.events.length} حدث)</span>
+                                                                        {item.type && (
+                                                                            <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${item.type === 'vacation' ? 'bg-red-100 text-red-700' :
+                                                                                item.type === 'exam' ? 'bg-orange-100 text-orange-700' :
+                                                                                    item.type === 'class' ? 'bg-green-100 text-green-700' :
+                                                                                        item.type === 'meeting' ? 'bg-purple-100 text-purple-700' :
+                                                                                            'bg-gray-100 text-gray-700'
+                                                                                }`}>
+                                                                                {item.type === 'class' ? 'حصة' : item.type === 'vacation' ? 'عطلة' : item.type === 'exam' ? 'امتحان' : item.type === 'meeting' ? 'اجتماع' : item.type}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-                                                                    <div className="text-sm text-gray-500 mt-1">
-                                                                        يبدأ: {new Date(item.events[item.events.length - 1].start).toLocaleDateString()} -
-                                                                        ينتهي: {new Date(item.events[0].start).toLocaleDateString()}
+                                                                    <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-3">
+                                                                        <span>يبدأ: {new Date(item.events[item.events.length - 1].start).toLocaleDateString()} - ينتهي: {new Date(item.events[0].start).toLocaleDateString()}</span>
+                                                                        {item.events[0]?.levelId && (
+                                                                            <span className="text-primary-green">• {data.levels?.find(l => l.id === item.events[0].levelId)?.title || 'المستوى'}</span>
+                                                                        )}
+                                                                        {item.events[0]?.teacherId && (
+                                                                            <span className="text-orange-600">• {(() => {
+                                                                                const t = data.teachers?.find(t => t.id === item.events[0].teacherId);
+                                                                                return t ? (t.nickname || `${t.firstName || ''} ${t.lastName || ''}`.trim() || t.name) : '';
+                                                                            })()}</span>
+                                                                        )}
+                                                                        {item.events[0]?.roomId && (
+                                                                            <span className="text-blue-600">• {data.rooms?.find(r => r.id === item.events[0].roomId)?.name || 'القاعة'}</span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -795,12 +871,40 @@ export default function ManageCalendar() {
                                                 );
                                             } else {
                                                 // Single Event
+                                                const level = data.levels?.find(l => l.id === item.levelId);
+                                                const teacher = data.teachers?.find(t => t.id === item.teacherId);
+                                                const room = data.rooms?.find(r => r.id === item.roomId);
+                                                const teacherName = teacher ? (teacher.nickname || `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || teacher.name) : null;
+
                                                 return (
                                                     <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                                        <div className="font-medium text-gray-800">
-                                                            {item.title}
-                                                            <div className="text-xs text-gray-400 font-normal mt-0.5">
-                                                                {new Date(item.start).toLocaleDateString()} - {new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-gray-800 flex items-center gap-2 flex-wrap">
+                                                                {item.title}
+                                                                {item.type && (
+                                                                    <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${item.type === 'vacation' ? 'bg-red-100 text-red-700' :
+                                                                        item.type === 'exam' ? 'bg-orange-100 text-orange-700' :
+                                                                            item.type === 'class' ? 'bg-green-100 text-green-700' :
+                                                                                item.type === 'meeting' ? 'bg-purple-100 text-purple-700' :
+                                                                                    'bg-gray-100 text-gray-700'
+                                                                        }`}>
+                                                                        {item.type === 'class' ? 'حصة' : item.type === 'vacation' ? 'عطلة' : item.type === 'exam' ? 'امتحان' : item.type === 'meeting' ? 'اجتماع' : item.type === 'activity' ? 'نشاط' : item.type}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-3">
+                                                                <span className="text-gray-400">
+                                                                    {new Date(item.start).toLocaleDateString()} - {new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                                {level && (
+                                                                    <span className="text-primary-green">• {level.title}</span>
+                                                                )}
+                                                                {teacherName && (
+                                                                    <span className="text-orange-600">• {teacherName}</span>
+                                                                )}
+                                                                {room && (
+                                                                    <span className="text-blue-600">• {room.name}</span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2">

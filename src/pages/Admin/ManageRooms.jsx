@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { dbService } from '../../services/db';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Trash2, Edit, Plus, MapPin, LayoutDashboard, Layers } from 'lucide-react';
+import { Save, Trash2, Edit, Plus, MapPin, LayoutDashboard, Layers, List, Tag, Users, GraduationCap, Heart } from 'lucide-react';
 import { BackButton } from '../../components/Navbar';
 import { toWesternNumerals } from '../../utils/dateUtils';
 import DataImportExportComponent from '../../components/DataImportExport';
@@ -87,8 +87,11 @@ export default function ManageBaseData() {
       setFormData({ name: '', code: '', address: '', phone: '', email: '', schedule: '', locationLink: '' });
     } else if (activeTab === 'rooms') {
       setFormData({ name: '', capacity: '', type: 'classroom', branchId: '' });
-    } else {
+    } else if (activeTab === 'levels') {
       setFormData({ title: '', description: '', category: 'children', order: 1 });
+    } else {
+      // For dropdown items: activityTypes, categories, socialStatuses, schoolLevels
+      setFormData({ name: '', value: '' });
     }
   };
 
@@ -421,6 +424,95 @@ export default function ManageBaseData() {
     </div>
   );
 
+  // ======== RENDER DROPDOWN ITEMS (Generic for all dropdown value types) ========
+  const renderDropdownItems = (collection, singularArabic, pluralArabic) => {
+    const items = data[collection] || [];
+
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="font-bold text-gray-700 flex items-center gap-2 mb-4">
+            {selectedId ? <Edit size={20} /> : <Plus size={20} />}
+            <span>{selectedId ? `تعديل ${singularArabic}` : `إضافة ${singularArabic} جديد`}</span>
+          </h2>
+          <form onSubmit={handleSubmit} className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px] space-y-1">
+              <label className="text-sm text-gray-500">الاسم *</label>
+              <input
+                required
+                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none"
+                placeholder={`مثال: ${singularArabic}`}
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="flex-1 min-w-[150px] space-y-1">
+              <label className="text-sm text-gray-500">القيمة (بالإنجليزية)</label>
+              <input
+                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-green outline-none dir-ltr text-right"
+                placeholder="value"
+                value={formData.value || ''}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+              />
+            </div>
+            <div className="flex gap-2">
+              {selectedId && (
+                <button type="button" onClick={resetForm} className="px-4 py-2 border rounded-lg hover:bg-gray-50">إلغاء</button>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-green-600 font-bold flex items-center gap-2"
+              >
+                <Save size={18} />
+                حفظ
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-600">
+            {pluralArabic} المتوفرة ({items.length})
+          </div>
+          {items.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">لا توجد بيانات</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {items.map(item => (
+                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div>
+                    <div className="font-medium text-gray-800">{item.name}</div>
+                    {item.value && (
+                      <div className="text-xs text-gray-400 dir-ltr text-right">{item.value}</div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setFormData({ name: item.name || '', value: item.value || '' });
+                      }}
+                      className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const getImportExportProps = () => {
     if (activeTab === 'branches') {
       return { data: data.branches || [], fileName: 'branches.csv', headerMap: { 'name': 'الاسم', 'code': 'الرمز' }, templateHeaders: ['الاسم', 'الرمز'] };
@@ -450,19 +542,38 @@ export default function ManageBaseData() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-200">
-        <button onClick={() => setActiveTab('branches')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'branches' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
-          <MapPin size={20} /><span>الفروع</span>
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+        <button onClick={() => setActiveTab('branches')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'branches' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <MapPin size={18} /><span>الفروع</span>
         </button>
-        <button onClick={() => setActiveTab('rooms')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'rooms' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
-          <LayoutDashboard size={20} /><span>القاعات</span>
+        <button onClick={() => setActiveTab('rooms')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'rooms' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <LayoutDashboard size={18} /><span>القاعات</span>
         </button>
-        <button onClick={() => setActiveTab('levels')} className={`pb-2 px-4 font-bold flex items-center gap-2 transition-colors ${activeTab === 'levels' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
-          <Layers size={20} /><span>المستويات</span>
+        <button onClick={() => setActiveTab('levels')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'levels' ? 'text-primary-green border-b-2 border-primary-green' : 'text-gray-400 hover:text-gray-600'}`}>
+          <Layers size={18} /><span>المستويات</span>
+        </button>
+        <span className="border-l border-gray-300 mx-2"></span>
+        <button onClick={() => setActiveTab('activityTypes')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'activityTypes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-400 hover:text-gray-600'}`}>
+          <Tag size={18} /><span>أنواع الأنشطة</span>
+        </button>
+        <button onClick={() => setActiveTab('categories')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'categories' ? 'text-pink-500 border-b-2 border-pink-500' : 'text-gray-400 hover:text-gray-600'}`}>
+          <Users size={18} /><span>الفئات</span>
+        </button>
+        <button onClick={() => setActiveTab('socialStatuses')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'socialStatuses' ? 'text-purple-500 border-b-2 border-purple-500' : 'text-gray-400 hover:text-gray-600'}`}>
+          <Heart size={18} /><span>الحالة الاجتماعية</span>
+        </button>
+        <button onClick={() => setActiveTab('schoolLevels')} className={`pb-2 px-3 font-bold flex items-center gap-2 transition-colors text-sm ${activeTab === 'schoolLevels' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-600'}`}>
+          <GraduationCap size={18} /><span>المستوى الدراسي</span>
         </button>
       </div>
 
-      {activeTab === 'branches' ? renderBranches() : activeTab === 'rooms' ? renderRooms() : renderLevels()}
+      {activeTab === 'branches' ? renderBranches() :
+        activeTab === 'rooms' ? renderRooms() :
+          activeTab === 'levels' ? renderLevels() :
+            activeTab === 'activityTypes' ? renderDropdownItems('activityTypes', 'نوع نشاط', 'أنواع الأنشطة') :
+              activeTab === 'categories' ? renderDropdownItems('categories', 'فئة', 'الفئات') :
+                activeTab === 'socialStatuses' ? renderDropdownItems('socialStatuses', 'حالة اجتماعية', 'الحالة الاجتماعية') :
+                  renderDropdownItems('schoolLevels', 'مستوى دراسي', 'المستوى الدراسي')}
     </div>
   );
 }

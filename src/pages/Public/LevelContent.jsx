@@ -1,7 +1,7 @@
 
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
-import { Video, Headphones, FileText, Download, ExternalLink } from 'lucide-react';
+import { Video, Headphones, FileText, Download, ExternalLink, Image as ImageIcon, Play } from 'lucide-react';
 import { BackButton } from '../../components/Navbar';
 import { useEffect, useState, useRef } from 'react';
 
@@ -65,6 +65,7 @@ export default function LevelContent() {
             case 'video': return <Video size={24} className="text-red-500" />;
             case 'audio': return <Headphones size={24} className="text-purple-500" />;
             case 'pdf': return <FileText size={24} className="text-blue-500" />;
+            case 'image': return <ImageIcon size={24} className="text-green-500" />;
             default: return <FileText size={24} className="text-gray-500" />;
         }
     };
@@ -74,7 +75,142 @@ export default function LevelContent() {
             case 'video': return 'فيديو';
             case 'audio': return 'تسجيل صوتي';
             case 'pdf': return 'ملف للقراءة';
+            case 'image': return 'صورة';
             default: return 'ملف';
+        }
+    };
+
+    // Render inline media player based on type
+    const renderMedia = (url, type) => {
+        if (!url) return null;
+
+        // YouTube embed
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            let videoId = '';
+            if (url.includes('youtube.com/watch')) {
+                videoId = new URL(url).searchParams.get('v');
+            } else if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1]?.split('?')[0];
+            }
+            if (videoId) {
+                return (
+                    <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
+                        <iframe
+                            src={`https://www.youtube.com/embed/${videoId}`}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                );
+            }
+        }
+
+        // Google Drive - convert to direct download link for audio/video
+        let mediaUrl = url;
+        if (url.includes('drive.google.com')) {
+            // Extract file ID from various Google Drive URL formats
+            let fileId = '';
+            if (url.includes('/file/d/')) {
+                fileId = url.split('/file/d/')[1]?.split('/')[0]?.split('?')[0];
+            } else if (url.includes('id=')) {
+                fileId = new URL(url).searchParams.get('id');
+            }
+
+            if (fileId) {
+                // Use direct download format for audio/video
+                if (type === 'audio' || type === 'video') {
+                    mediaUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                } else if (type === 'image') {
+                    mediaUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+                } else if (type === 'pdf') {
+                    // For PDF, show Google Drive viewer
+                    return (
+                        <a
+                            href={`https://drive.google.com/file/d/${fileId}/view`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 p-4 bg-blue-50 rounded-lg text-blue-600 hover:bg-blue-100 transition-colors"
+                        >
+                            <FileText size={20} />
+                            <span>فتح الملف PDF</span>
+                            <ExternalLink size={16} />
+                        </a>
+                    );
+                }
+            }
+        }
+
+        switch (type) {
+            case 'video':
+                return (
+                    <video
+                        controls
+                        className="w-full rounded-lg bg-black max-h-[300px]"
+                        preload="metadata"
+                    >
+                        <source src={mediaUrl} />
+                        المتصفح لا يدعم تشغيل الفيديو
+                    </video>
+                );
+            case 'audio':
+                return (
+                    <div className="space-y-2">
+                        <audio
+                            controls
+                            className="w-full"
+                            preload="metadata"
+                        >
+                            <source src={mediaUrl} />
+                            المتصفح لا يدعم تشغيل الصوت
+                        </audio>
+                        {url.includes('drive.google.com') && (
+                            <a
+                                href={mediaUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 p-2 bg-purple-50 rounded-lg text-purple-600 hover:bg-purple-100 transition-colors text-sm"
+                            >
+                                <Download size={16} />
+                                <span>تحميل الملف الصوتي</span>
+                            </a>
+                        )}
+                    </div>
+                );
+            case 'image':
+                return (
+                    <img
+                        src={mediaUrl}
+                        alt="صورة"
+                        className="w-full rounded-lg object-cover max-h-[300px] cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(url, '_blank')}
+                    />
+                );
+            case 'pdf':
+                return (
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 p-4 bg-blue-50 rounded-lg text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                        <FileText size={20} />
+                        <span>فتح الملف PDF</span>
+                        <ExternalLink size={16} />
+                    </a>
+                );
+            default:
+                return (
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-primary-green hover:bg-green-50/10 text-sm text-gray-600 hover:text-primary-green transition-all"
+                    >
+                        <span className="truncate flex-1 ml-2 dir-ltr text-left">{url}</span>
+                        <ExternalLink size={16} />
+                    </a>
+                );
         }
     };
 
@@ -126,46 +262,36 @@ export default function LevelContent() {
                                                 {branchName}
                                             </h3>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                                 {contentByBranch[branchId].map((item) => {
                                                     const isHighlighted = item.id === highlightedContent;
                                                     return (
                                                         <div
                                                             key={item.id}
                                                             ref={isHighlighted ? highlightRef : null}
-                                                            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all group ${isHighlighted
+                                                            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all ${isHighlighted
                                                                 ? 'border-primary-green border-2 ring-4 ring-primary-green/30 animate-pulse'
                                                                 : 'border-gray-100'
                                                                 }`}
                                                         >
-                                                            <div className="p-6">
-                                                                <div className="flex items-start justify-between mb-4">
-                                                                    <div className="bg-gray-50 p-3 rounded-lg group-hover:bg-gray-100 transition-colors">
-                                                                        {getIcon(item.type)}
+                                                            {/* Media Preview */}
+                                                            <div className="bg-gray-50">
+                                                                {(item.urls || [item.url]).slice(0, 1).map((url, idx) => (
+                                                                    <div key={idx}>
+                                                                        {renderMedia(url, item.type)}
                                                                     </div>
-                                                                    <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Content Info */}
+                                                            <div className="p-4">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    {getIcon(item.type)}
+                                                                    <span className="text-xs font-medium bg-gray-100 px-2 py-0.5 rounded text-gray-500">
                                                                         {getTypeLabel(item.type)}
                                                                     </span>
                                                                 </div>
-                                                                <h3 className="font-bold text-gray-800 mb-2 line-clamp-2">{item.title}</h3>
-
-                                                                <div className="space-y-2 mt-4">
-                                                                    {(item.urls || [item.url]).map((url, idx) => {
-                                                                        if (!url) return null;
-                                                                        return (
-                                                                            <a
-                                                                                key={idx}
-                                                                                href={url}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-primary-green hover:bg-green-50/10 text-sm text-gray-600 hover:text-primary-green transition-all"
-                                                                            >
-                                                                                <span className="truncate flex-1 ml-2 dir-ltr text-left">{url}</span>
-                                                                                <ExternalLink size={16} />
-                                                                            </a>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                                <h3 className="font-bold text-gray-800 text-sm line-clamp-2">{item.title}</h3>
                                                             </div>
                                                         </div>
                                                     );
